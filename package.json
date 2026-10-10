@@ -1,0 +1,36 @@
+{
+  "name": "ccswitch-pulse",
+  "version": "0.1.0",
+  "description": "A local, read-only model usage dashboard for CC Switch",
+  "type": "module",
+  "bin": {
+    "ccswitch-pulse": "./bin/ccswitch-pulse.js"
+  },
+  "engines": {
+    "node": ">=24.6.0"
+  },
+  "scripts": {
+    "start": "node ./bin/ccswitch-pulse.js",
+    "test": "node --test",
+    "pack:check": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "echarts": "^6.1.0"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "public/",
+    "README.md",
+    "README.en.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "cc-switch",
+    "ccswitch",
+    "dashboard",
+    "sqlite",
+    "model-usage"
+  ],
+  "license": "MIT"
+}
