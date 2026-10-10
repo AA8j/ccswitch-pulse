@@ -7,6 +7,8 @@
     <meta name="description" content="CCSwitch Pulse — 回放每一次模型调用。" />
     <title>CCSwitch Pulse · 模型用量观测台</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script src="/theme.js"></script>
+    <script src="/i18n.js"></script>
     <link rel="stylesheet" href="/styles.css" />
     <script src="/vendor/echarts.min.js" defer></script>
     <script src="/app.js" defer></script>
@@ -50,6 +52,43 @@
             <strong>Overview</strong>
           </div>
           <div class="topbar-right">
+            <button
+              id="lang-toggle"
+              class="lang-toggle"
+              type="button"
+              aria-label="Switch to English"
+              title="Switch to English"
+            >
+              EN
+            </button>
+            <button
+              id="theme-toggle"
+              class="theme-toggle"
+              type="button"
+              aria-label="切换到日间模式"
+              title="切换到日间模式"
+            >
+              <svg
+                class="theme-icon-sun"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="4" />
+                <path
+                  d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"
+                />
+              </svg>
+              <svg
+                class="theme-icon-moon"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  d="M20.2 15.5A8.5 8.5 0 0 1 8.5 3.8 8.5 8.5 0 1 0 20.2 15.5Z"
+                />
+              </svg>
+              <span id="theme-label">日间模式</span>
+            </button>
             <span class="online-dot"></span
             ><span id="db-status">正在连接数据源</span
             ><span class="topbar-divider"></span

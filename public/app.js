@@ -1,23 +1,44 @@
 /* global echarts */
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
-const COLORS = [
-  "#68e2d2",
-  "#7aa8ff",
-  "#ba97ff",
-  "#f6c77a",
-  "#ee8fa5",
-  "#8fe1a1",
-  "#70c9ed",
-  "#cc92d7",
-  "#eab677",
-  "#7e97ec",
-  "#98d7c0",
-  "#dd8996",
-  "#b6cf72",
-  "#b1a5fb",
-  "#e5a7d5",
-];
+const t = (key, values) => window.pulseI18n.t(key, values);
+const language = () => window.pulseI18n.get();
+const COLORS = {
+  dark: [
+    "#68e2d2",
+    "#7aa8ff",
+    "#ba97ff",
+    "#f6c77a",
+    "#ee8fa5",
+    "#8fe1a1",
+    "#70c9ed",
+    "#cc92d7",
+    "#eab677",
+    "#7e97ec",
+    "#98d7c0",
+    "#dd8996",
+    "#b6cf72",
+    "#b1a5fb",
+    "#e5a7d5",
+  ],
+  light: [
+    "#087d78",
+    "#326bc7",
+    "#7952b5",
+    "#a76d12",
+    "#b74768",
+    "#34865b",
+    "#237f9f",
+    "#9c509e",
+    "#b46f36",
+    "#4d61b7",
+    "#3d8d7a",
+    "#b25b72",
+    "#718c26",
+    "#7666ba",
+    "#ad5d97",
+  ],
+};
 const state = {
   meta: null,
   series: null,
@@ -47,9 +68,18 @@ function toast(message) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => element.classList.remove("show"), 3500);
 }
-const number = (value) => Number(value || 0).toLocaleString("zh-CN");
+const number = (value) =>
+  Number(value || 0).toLocaleString(language() === "zh" ? "zh-CN" : "en-US");
 function compact(value) {
   const n = Number(value || 0);
+  if (language() === "en")
+    return n >= 1e9
+      ? `${(n / 1e9).toFixed(1)}B`
+      : n >= 1e6
+        ? `${(n / 1e6).toFixed(1)}M`
+        : n >= 1e3
+          ? `${(n / 1e3).toFixed(1)}K`
+          : number(Math.round(n));
   return n >= 1e8
     ? `${(n / 1e8).toFixed(1)}亿`
     : n >= 1e4
@@ -70,10 +100,11 @@ function escapeHtml(value) {
   );
 }
 function dateText(seconds, details = true) {
-  return new Intl.DateTimeFormat("zh-CN", {
+  return new Intl.DateTimeFormat(language() === "zh" ? "zh-CN" : "en-US", {
     month: "2-digit",
     day: "2-digit",
     ...(details ? { hour: "2-digit", minute: "2-digit" } : {}),
+    hour12: false,
   }).format(new Date(seconds * 1000));
 }
 function inputDate(seconds) {
@@ -83,15 +114,29 @@ function inputDate(seconds) {
 }
 function sourceName(source) {
   return source === "proxy"
-    ? "代理"
+    ? t("sourceProxy")
     : source === "codex_session"
-      ? "会话导入"
-      : source || "未知";
+      ? t("sourceSession")
+      : source || t("sourceUnknown");
 }
 function colorFor(model) {
   if (!state.colors.has(model))
-    state.colors.set(model, COLORS[state.colors.size % COLORS.length]);
-  return state.colors.get(model);
+    state.colors.set(model, state.colors.size % COLORS.dark.length);
+  return COLORS[window.pulseTheme.get()][state.colors.get(model)];
+}
+function chartTheme() {
+  const css = getComputedStyle(document.documentElement);
+  const value = (name) => css.getPropertyValue(name).trim();
+  return {
+    axis: value("--chart-axis"),
+    grid: value("--chart-grid"),
+    tooltipBg: value("--chart-tooltip-bg"),
+    tooltipBorder: value("--chart-tooltip-border"),
+    tooltipText: value("--chart-tooltip-text"),
+    tooltipMuted: value("--chart-tooltip-muted"),
+    future: value("--chart-future"),
+    cursor: value("--chart-cursor"),
+  };
 }
 function metricValue(row) {
   return Number(row?.[state.metric] || 0);
@@ -106,7 +151,7 @@ function stopPlayback() {
   if (state.timer) clearInterval(state.timer);
   state.timer = null;
   setText("#play-symbol", "▶");
-  $("#play-button").setAttribute("aria-label", "播放");
+  $("#play-button").setAttribute("aria-label", t("play"));
 }
 
 async function fetchJson(url) {
@@ -147,26 +192,37 @@ function queryString() {
 
 async function loadMeta() {
   state.meta = await fetchJson("/api/meta");
-  $("#demo-label").textContent = state.meta.demo ? "DEMO MODE" : "";
+  renderMetaLabels();
+}
+
+function renderMetaLabels() {
+  if (!state.meta) return;
+  $("#demo-label").textContent = state.meta.demo ? t("demo") : "";
+  $("#demo-label").title = state.meta.demo ? t("demoHint") : "";
   setText(
     "#db-status",
     state.meta.demo
-      ? "演示数据已连接"
+      ? t("dbDemo")
       : state.meta.available
-        ? "CC Switch 已连接"
-        : "未找到 CC Switch 数据库",
+        ? t("dbConnected")
+        : t("dbMissing"),
   );
   setText(
     "#last-updated",
-    state.meta.last ? `最新 ${dateText(state.meta.last)}` : "等待数据",
+    state.meta.last
+      ? t("updated", { date: dateText(state.meta.last) })
+      : t("waiting"),
   );
   const select = $("#source-select");
   const current = select.value;
-  select.replaceChildren(new Option("全部来源", "all"));
+  select.replaceChildren(new Option(t("allSources"), "all"));
   for (const source of state.meta.sources || [])
     select.add(
       new Option(
-        `${sourceName(source.id)} · ${compact(source.count)}`,
+        t("sourceCount", {
+          name: sourceName(source.id),
+          count: compact(source.count),
+        }),
         source.id,
       ),
     );
@@ -178,10 +234,7 @@ async function loadMeta() {
 
 function showUnavailable() {
   $("#empty-state").hidden = false;
-  setText(
-    "#empty-message",
-    "未找到 ~/.cc-switch/cc-switch.db。可用 --db 指定数据库路径，或用 --demo 预览界面。",
-  );
+  setText("#empty-message", t("unavailable"));
   setText("#kpi-calls", "—");
   setText("#kpi-models", "—");
   setText("#kpi-tokens", "—");
@@ -193,7 +246,7 @@ async function loadData() {
   if (!state.meta?.available || !state.range) return;
   stopPlayback();
   const id = ++state.requestId;
-  setText("#range-summary", "正在读取…");
+  setText("#range-summary", t("loading"));
   try {
     const qs = queryString();
     const [series, requests] = await Promise.all([
@@ -210,7 +263,7 @@ async function loadData() {
       `${dateText(state.range.from)} — ${dateText(state.range.to)}`,
     );
   } catch (error) {
-    setText("#range-summary", "查询失败");
+    setText("#range-summary", t("loadFailed"));
     toast(error.message);
   }
 }
@@ -252,11 +305,7 @@ function renderMetrics() {
   setText("#kpi-tokens", compact(total.tokens));
   setText("#kpi-cost", money(total.cost));
   $("#empty-state").hidden = total.calls > 0;
-  if (!total.calls)
-    setText(
-      "#empty-message",
-      "这段时间没有记录。试试扩大时间范围或切换数据来源。",
-    );
+  if (!total.calls) setText("#empty-message", t("emptyRange"));
 }
 
 function renderLegend() {
@@ -280,7 +329,7 @@ function renderLegend() {
 }
 function toggleModel(model) {
   if (state.selected.has(model) && state.selected.size === 1) {
-    toast("至少保留一个显示模型");
+    toast(t("keepOne"));
     return;
   }
   if (state.selected.has(model)) state.selected.delete(model);
@@ -303,6 +352,7 @@ function renderChart() {
     return;
   }
   const byModel = indexedValues();
+  const theme = chartTheme();
   const visible = state.models.filter((model) => state.selected.has(model));
   const fullValues = visible.map((model) =>
     state.times.map((time) => metricValue(byModel.get(model)?.get(time))),
@@ -345,7 +395,7 @@ function renderChart() {
             symbol: "none",
             label: { show: false },
             lineStyle: {
-              color: "#8ee8dc",
+              color: theme.cursor,
               type: "dashed",
               width: 1,
               opacity: 0.8,
@@ -357,7 +407,7 @@ function renderChart() {
       index === 0 && state.cursor < state.times.length - 1
         ? {
             silent: true,
-            itemStyle: { color: "#080e17", opacity: 0.54 },
+            itemStyle: { color: theme.future, opacity: 0.54 },
             data: [
               [
                 {
@@ -380,20 +430,20 @@ function renderChart() {
       grid: { left: 61, right: 23, top: 21, bottom: 48 },
       tooltip: {
         trigger: "axis",
-        backgroundColor: "#162839",
-        borderColor: "#405569",
+        backgroundColor: theme.tooltipBg,
+        borderColor: theme.tooltipBorder,
         borderWidth: 1,
-        textStyle: { color: "#dfeef5", fontSize: 11 },
+        textStyle: { color: theme.tooltipText, fontSize: 11 },
         padding: [10, 12],
         axisPointer: {
           type: "line",
-          lineStyle: { color: "#5f8391", type: "dashed" },
+          lineStyle: { color: theme.axis, type: "dashed" },
         },
         formatter: (items) => {
           if (!items?.length) return "";
           const time = items[0].axisValue / 1000;
           return (
-            `<div style="font-weight:700;margin-bottom:6px;color:#a9c4d3">${escapeHtml(dateText(time))}</div>` +
+            `<div style="font-weight:700;margin-bottom:6px;color:${theme.tooltipMuted}">${escapeHtml(dateText(time))}</div>` +
             items
               .filter((item) => item.value && item.value[1] != null)
               .map(
@@ -409,10 +459,10 @@ function renderChart() {
         min: state.times[0] * 1000,
         max: end,
         boundaryGap: false,
-        axisLine: { lineStyle: { color: "#34495c" } },
+        axisLine: { lineStyle: { color: theme.axis } },
         axisTick: { show: false },
         axisLabel: {
-          color: "#688096",
+          color: theme.axis,
           fontSize: 10,
           margin: 15,
           formatter: (value) =>
@@ -428,12 +478,12 @@ function renderChart() {
         axisLine: { show: false },
         axisTick: { show: false },
         axisLabel: {
-          color: "#688096",
+          color: theme.axis,
           fontSize: 10,
           formatter: (value) =>
             state.metric === "cost" ? `$${compact(value)}` : compact(value),
         },
-        splitLine: { lineStyle: { color: "#233344", type: "dashed" } },
+        splitLine: { lineStyle: { color: theme.grid, type: "dashed" } },
       },
       series,
     },
@@ -453,7 +503,12 @@ function renderPlayback() {
   setText("#playback-time", dateText(time));
   setText(
     "#ranking-time",
-    `${dateText(time)} · ${state.series.range.bucket < 86400 ? "当前时段" : "当前日期"}`,
+    t("rankingTime", {
+      date: dateText(time),
+      period: t(
+        state.series.range.bucket < 86400 ? "currentBucket" : "currentDate",
+      ),
+    }),
   );
   setText("#timeline-start", dateText(state.times[0]));
   setText("#timeline-end", dateText(state.times.at(-1)));
@@ -463,7 +518,7 @@ function renderPlayback() {
       ? 100
       : Math.round((state.cursor / (state.times.length - 1)) * 100);
   $("#scrubber").style.background =
-    `linear-gradient(90deg,#68e2d2 ${percent}%,#31485a ${percent}%)`;
+    `linear-gradient(90deg,var(--teal) ${percent}%,var(--scrubber-track) ${percent}%)`;
   setText("#play-progress", `${percent}%`);
   renderRanking();
 }
@@ -478,7 +533,7 @@ function renderRanking() {
   if (!rows.length) {
     const empty = document.createElement("p");
     empty.className = "ranking-foot";
-    empty.textContent = "这个时段没有调用记录";
+    empty.textContent = t("noBucket");
     host.append(empty);
     return;
   }
@@ -489,7 +544,7 @@ function renderRanking() {
     element.setAttribute("role", "button");
     element.setAttribute(
       "aria-label",
-      `${row.model}，${metricText(metricValue(row))}，切换主图显示`,
+      t("rankAria", { model: row.model, value: metricText(metricValue(row)) }),
     );
     const head = document.createElement("div");
     head.className = "rank-row-head";
@@ -530,11 +585,7 @@ function renderInsights() {
   const host = $("#insights-list");
   host.replaceChildren();
   if (!state.series.totals.calls) {
-    insight(
-      "○",
-      "等待更多数据",
-      "选一段有调用记录的时间，使用模式会出现在这里。",
-    );
+    insight("○", t("insightEmptyTitle"), t("insightEmptyBody"));
     return;
   }
   const timeTotals = new Map(),
@@ -547,18 +598,25 @@ function renderInsights() {
     leader = [...modelTotals].sort((a, b) => b[1] - a[1])[0];
   insight(
     "↗",
-    "最高峰时段",
-    `${dateText(peak[0])} · ${number(peak[1])} 次调用，点击回放进度条可查看相邻变化。`,
+    t("peakTitle"),
+    t("peakBody", { date: dateText(peak[0]), count: number(peak[1]) }),
   );
   insight(
     "✧",
-    "最常使用模型",
-    `${leader[0]} · 占所选范围调用量的 ${Math.round((leader[1] / state.series.totals.calls) * 100)}%。`,
+    t("leaderTitle"),
+    t("leaderBody", {
+      model: leader[0],
+      percent: Math.round((leader[1] / state.series.totals.calls) * 100),
+    }),
   );
   insight(
     "◈",
-    "数据口径",
-    `当前为${$("#model-mode").value === "actual" ? "实际模型" : "请求模型"}，来源：${$("#source-select").selectedOptions[0]?.textContent || "全部"}。费用为 CC Switch 估算值。`,
+    t("definitionTitle"),
+    t("definitionBody", {
+      mode: $("#model-mode").selectedOptions[0]?.textContent || "",
+      source:
+        $("#source-select").selectedOptions[0]?.textContent || t("allSources"),
+    }),
   );
   function insight(icon, title, description) {
     const item = document.createElement("div");
@@ -583,7 +641,7 @@ function renderRequests() {
     const tr = document.createElement("tr");
     const td = document.createElement("td");
     td.colSpan = 5;
-    td.textContent = "暂无调用记录";
+    td.textContent = t("noRequests");
     tr.append(td);
     host.append(tr);
     return;
@@ -641,7 +699,7 @@ function play() {
   if (state.cursor >= state.times.length - 1) state.cursor = 0;
   state.anchor = state.cursor;
   setText("#play-symbol", "Ⅱ");
-  $("#play-button").setAttribute("aria-label", "暂停");
+  $("#play-button").setAttribute("aria-label", t("pause"));
   renderChart();
   renderPlayback();
   state.timer = setInterval(tick, Math.max(80, 420 / state.speed));
@@ -651,7 +709,7 @@ function csvCell(value) {
 }
 function exportCsv() {
   if (!state.series) {
-    toast("暂无可导出的数据");
+    toast(t("exportEmpty"));
     return;
   }
   const lines = [
@@ -680,7 +738,7 @@ function exportCsv() {
   link.download = `ccswitch-pulse-${new Date().toISOString().slice(0, 10)}.csv`;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  toast("已导出当前时间范围的聚合数据");
+  toast(t("exportDone"));
 }
 
 $$(".preset").forEach((button) =>
@@ -690,7 +748,7 @@ $("#apply-button").addEventListener("click", () => {
   const from = Math.floor(new Date($("#date-from").value).getTime() / 1000),
     to = Math.floor(new Date($("#date-to").value).getTime() / 1000);
   if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) {
-    toast("请选择有效的起止时间");
+    toast(t("invalidRange"));
     return;
   }
   state.range = { from, to };
@@ -734,12 +792,68 @@ $("#speed-select").addEventListener("change", (event) => {
   }
 });
 $("#export-button").addEventListener("click", exportCsv);
+function updateThemeControl() {
+  const light = window.pulseTheme.get() === "light";
+  const label = t(light ? "toNight" : "toDay");
+  $("#theme-label").textContent = t(light ? "night" : "day");
+  $("#theme-toggle").setAttribute("aria-label", label);
+  $("#theme-toggle").title = label;
+}
+function updateLanguageControl() {
+  const chinese = language() === "zh";
+  const label = t(chinese ? "toEnglish" : "toChinese");
+  $("#lang-toggle").textContent = chinese ? "EN" : "中文";
+  $("#lang-toggle").setAttribute("aria-label", label);
+  $("#lang-toggle").title = label;
+  document.title = chinese
+    ? "CCSwitch Pulse · 模型用量观测台"
+    : "CCSwitch Pulse · Model usage dashboard";
+  document
+    .querySelector('meta[name="description"]')
+    ?.setAttribute(
+      "content",
+      chinese
+        ? "CCSwitch Pulse — 回放每一次模型调用。"
+        : "CCSwitch Pulse — replay your model usage, locally.",
+    );
+}
+$("#lang-toggle").addEventListener("click", () => {
+  window.pulseI18n.set(language() === "zh" ? "en" : "zh");
+});
+$("#theme-toggle").addEventListener("click", () => {
+  window.pulseTheme.apply(
+    window.pulseTheme.get() === "light" ? "dark" : "light",
+    true,
+  );
+});
+window.addEventListener("pulse-language-change", () => {
+  updateLanguageControl();
+  updateThemeControl();
+  renderMetaLabels();
+  if (state.range && state.series)
+    setText(
+      "#range-summary",
+      `${dateText(state.range.from)} — ${dateText(state.range.to)}`,
+    );
+  if (state.series) renderAll();
+  $("#play-button").setAttribute(
+    "aria-label",
+    t(state.timer ? "pause" : "play"),
+  );
+});
+window.addEventListener("pulse-theme-change", () => {
+  updateThemeControl();
+  if (state.series) renderAll();
+});
+window.pulseI18n.translateStatic();
+updateLanguageControl();
+updateThemeControl();
 $("#refresh-button").addEventListener("click", async () => {
   try {
     await loadMeta();
     if (state.preset) setPreset(state.preset);
     else await loadData();
-    toast("数据已刷新");
+    toast(t("refreshed"));
   } catch (error) {
     toast(error.message);
   }
@@ -759,7 +873,7 @@ chart.on("click", (params) => {
     await loadMeta();
     if (state.meta.available) setPreset(7);
   } catch (error) {
-    setText("#db-status", "连接失败");
+    setText("#db-status", t("connectionFailed"));
     toast(error.message);
   }
 })();

@@ -15,6 +15,14 @@ const staticFiles = new Map([
     [join(root, "public", "app.js"), "text/javascript; charset=utf-8"],
   ],
   [
+    "/theme.js",
+    [join(root, "public", "theme.js"), "text/javascript; charset=utf-8"],
+  ],
+  [
+    "/i18n.js",
+    [join(root, "public", "i18n.js"), "text/javascript; charset=utf-8"],
+  ],
+  [
     "/styles.css",
     [join(root, "public", "styles.css"), "text/css; charset=utf-8"],
   ],

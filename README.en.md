@@ -1,43 +1,86 @@
-# CCSwitch Pulse
+<p align="center">
+  <img src="public/favicon.svg" alt="CCSwitch Pulse" width="58" height="58" />
+</p>
+<h1 align="center">CCSwitch Pulse</h1>
+<p align="center"><strong>Put every model call back on the timeline.</strong></p>
+<p align="center">A local Web dashboard for CC Switch: explore trends, compare models, replay usage.</p>
+<p align="center">
+  <a href="README.md">简体中文</a> ·
+  <a href="#start-in-one-minute">Quick start</a> ·
+  <a href="#what-you-can-do">Features</a> ·
+  <a href="#data-and-privacy">Data and privacy</a>
+</p>
 
-[简体中文](./README.md) · A local model usage dashboard for CC Switch
+![CCSwitch Pulse dark theme demo](docs/images/dashboard-dark-en.png)
 
-See model usage on a timeline. Compare calls, tokens, and estimated cost across models, then replay the chart from any point in time. The UI is designed for desktop browsers. The app opens the CC Switch SQLite database **read-only** and listens on `127.0.0.1` by default.
+> Screenshots use **synthetic demo data** and contain no personal usage records. The dashboard is designed for desktop browsers. It supports light and dark themes plus Chinese and English; your choices are saved in your browser.
 
-## Features
+## Start in one minute
 
-- Custom time ranges with 5-minute, 15-minute, hourly, daily, and weekly buckets.
-- Multi-model line, grouped bar, and stacked bar charts; switch between calls, tokens, and estimated cost.
-- Scrub to any playback start, play or pause, step between buckets, adjust speed, and watch the current-bucket ranking.
-- Filter proxy requests and imported session usage; switch between actual and requested model names.
-- Summary cards, peak highlights, recent requests, and aggregated CSV export.
-- Deterministic demo data for contributors without a CC Switch database.
-
-## One-command run: GitHub + npx
-
-After publishing this repository on your own GitHub account, replace `YOUR_GITHUB_USER` and run:
+After uploading the project to your GitHub account, replace `YOUR_GITHUB_USER` with your actual username:
 
 ```bash
 npx -y github:YOUR_GITHUB_USER/ccswitch-pulse
 ```
 
-You do **not** need to publish to the npm registry. The root `package.json` declares one `bin` entry, allowing npx to install and run the CLI directly from GitHub. You can pin a Git tag with `github:YOUR_GITHUB_USER/ccswitch-pulse#v0.1.0`. The GitHub command will work only after the repository is uploaded; local commands are below.
+The command installs dependencies, reads `~/.cc-switch/cc-switch.db` by default, and opens the local dashboard in a browser. Press `Ctrl+C` to stop. **This repository has not been uploaded to GitHub yet**; the remote command works after publication.
 
-**Requirements:** Node.js **24.6 or newer**, npm/npx, and a local CC Switch usage database. Older Node 24 releases may print one `ExperimentalWarning` for the built-in SQLite module; read-only operation still works.
-
-The CLI reads `~/.cc-switch/cc-switch.db` by default, opens the local dashboard in your browser, and stops with `Ctrl+C`. Select a database explicitly:
-
-```bash
-npx -y github:YOUR_GITHUB_USER/ccswitch-pulse --db /path/to/cc-switch.db
-```
-
-Preview the UI with sample data:
+Want to explore without a database?
 
 ```bash
 npx -y github:YOUR_GITHUB_USER/ccswitch-pulse --demo
 ```
 
-Other options: `--port 3456`, `--no-open`, `--help`, and the `CC_SWITCH_DB` environment variable.
+With a local checkout, run `npm ci && npm start` or `npm start -- --demo` for sample data.
+
+**Requirements:** Node.js 24.6+, npm/npx, and a desktop browser. Live mode needs a local CC Switch SQLite usage database; demo mode does not. Publishing to the npm registry is optional: the repository declares a single CLI `bin` entry, so npx can run it from GitHub.
+
+## What you can do
+
+| Question | In the dashboard |
+| --- | --- |
+| Which models did I use most, and when? | Choose a date range and bucket size; compare models with line, grouped bar, or stacked bar charts. |
+| Did a usage spike appear suddenly? | Scrub to any point and press Play. The chart, current-bucket ranking, and progress move together. Pause, step, or use 0.5×–4× speed. |
+| Do calls, tokens, and costs tell the same story? | Switch metrics and filter by data source, actual model, or requested model. |
+| Can I take the analysis elsewhere? | Review overview cards, peak highlights, and recent calls; export an aggregated CSV for the selected range. |
+
+**Comfortable for long sessions:** use the light theme by day and dark theme at night. Switch the whole interface between English and Chinese at any time. Charts, controls, feedback, and timeline labels update together without resetting your filters or playback position.
+
+<details>
+<summary><strong>See the light theme</strong></summary>
+<br />
+
+![CCSwitch Pulse light theme demo](docs/images/dashboard-light-en.png)
+
+</details>
+
+## Running it
+
+Choose another database file:
+
+```bash
+npx -y github:YOUR_GITHUB_USER/ccswitch-pulse --db /path/to/cc-switch.db
+```
+
+| Option | Purpose |
+| --- | --- |
+| `--demo` | Preview synthetic data without reading a database. Demo model labels and costs are illustrative, not real provider data. |
+| `--db PATH` | Select a CC Switch SQLite file; `CC_SWITCH_DB` is also supported. |
+| `--port N` | Select a local port; default is `3456`. Use `0` to choose an available port. |
+| `--no-open` | Start the server without opening a browser. |
+| `--help` | Show CLI help. |
+
+The server listens only on `127.0.0.1`. If the default port is busy, use `--port 0`; the CLI prints the actual URL.
+
+## Data and privacy
+
+- **Read-only database:** Node's built-in SQLite opens the CC Switch file read-only. The HTTP API exposes `GET` queries and no mutation endpoint.
+- **Local by default:** the server binds to `127.0.0.1`. ECharts is served from the installed local dependency, with no external CDN. The API does not return prompts, responses, error bodies, or session content.
+- **Definitions:** calls count `proxy_request_logs` records in the range; empty chart buckets show zero. Tokens combine input, output, cache reads, and cache creation. Cost is the estimated USD value recorded by CC Switch, **not a provider invoice**.
+- **Models and sources:** “Actual model” uses `model`; “Requested model” prefers `request_model` and falls back to `model`. Proxy requests and imported sessions can be filtered separately. Imported status codes are not treated as measured HTTP success rates.
+- **Safe sharing:** `.gitignore` excludes database, WAL, and SHM files. Still review commits before publication to avoid sharing personal logs.
+
+This project is not affiliated with the CC Switch maintainers. Database schema changes may require updates to `src/data.js`.
 
 ## Develop locally
 
@@ -45,45 +88,53 @@ Other options: `--port 3456`, `--no-open`, `--help`, and the `CC_SWITCH_DB` envi
 git clone https://github.com/YOUR_GITHUB_USER/ccswitch-pulse.git
 cd ccswitch-pulse
 npm ci
-npm start
+npm start -- --demo
 ```
 
-Before uploading the repository, run `npm ci && npm start` in the project directory, or `npm start -- --demo`. Verify changes with:
-
-```bash
-npm test
-npm run pack:check
-```
-
-The front end needs no build step. Static assets and the locally installed ECharts distribution are served by the Node process; no external CDN is needed.
-
-## Architecture
+The front end has no build step. Run `npm test` for aggregation, filtering, and read-only behavior; run `npm run pack:check` to inspect distributable files. The project includes an MIT license and GitHub Actions CI.
 
 ```text
-bin/ccswitch-pulse.js    CLI parsing, startup, browser launch
-src/data.js              Read-only SQLite access and aggregate queries
-src/demo.js              Reproducible sample data
-src/server.js            Loopback HTTP API and static assets
-public/                  Web UI, interactions, and design system
-test/                    Aggregation, filtering, and read-only tests
-.github/workflows/ci.yml GitHub Actions checks
+bin/ccswitch-pulse.js  CLI arguments, startup, browser launch
+src/data.js            Read-only SQLite queries, validation, aggregation
+src/demo.js            Synthetic rolling demo data
+src/server.js          Local HTTP server and static assets
+public/                UI, charts, themes, and bilingual copy
+test/                  Data behavior tests
 ```
 
-`GET /api/meta` provides available dates and data sources. `GET /api/series` returns model-by-time aggregates. `GET /api/requests` returns a limited set of recent usage fields. There is no database mutation endpoint, and the API does not expose prompts, responses, error payloads, or session content.
+The API provides `GET /api/meta`, `GET /api/series`, and `GET /api/requests`. To support another CC Switch schema version, start with `src/data.js`.
 
-## Data definitions and privacy
+## FAQ
 
-- **Calls:** number of `proxy_request_logs` rows in the selected range; empty time buckets are filled with zero in the chart.
-- **Actual model:** `model`. **Requested model:** `request_model`, falling back to `model` when absent.
-- **Tokens:** input + output + cache read + cache creation. **Cost:** the estimated USD value already recorded by CC Switch, not a provider invoice.
-- Proxy logs and imported CLI session usage expose different signals. The dashboard keeps a source filter and does not interpret imported records as measured HTTP success rates.
-- The server binds to `127.0.0.1` and opens SQLite read-only. Never commit your database, WAL files, or personal request logs. `.gitignore` excludes database files.
+<details>
+<summary>The dashboard cannot find my database.</summary>
 
-CC Switch owns its database format; this project is not affiliated with its maintainers. Schema changes may require updates to `src/data.js`.
+Check that CC Switch has recorded usage and that `~/.cc-switch/cc-switch.db` exists. Use `--db PATH` if your file is elsewhere, or `--demo` to preview the UI.
 
-## Open-source checklist
+</details>
 
-The repository includes an MIT license, tests, and CI. Before sharing: replace `YOUR_GITHUB_USER`, add screenshots, create a `v0.1.0` Git tag, and test the npx command on a machine without a local checkout. **This project has not been uploaded to GitHub yet.**
+<details>
+<summary>Why do I see an SQLite ExperimentalWarning?</summary>
+
+This is emitted by Node 24's built-in SQLite module. The project still queries the file read-only. Use Node.js 24.6 or newer.
+
+</details>
+
+<details>
+<summary>Why does cost differ from my bill?</summary>
+
+The dashboard displays estimated USD cost already recorded by CC Switch. Model prices, discounts, cache billing, and settlement rules may differ; your provider's invoice is authoritative.
+
+</details>
+
+## Publish on GitHub
+
+1. Create a public `ccswitch-pulse` repository and push this project's Git commits.
+2. Replace `YOUR_GITHUB_USER` in both READMEs with your actual username. You can use the dark screenshot as the repository's Social preview.
+3. On a machine without a local checkout, run `npx -y github:YOUR_GITHUB_USER/ccswitch-pulse --demo` to verify GitHub installation and browser startup.
+4. Optionally tag the first release `v0.1.0`. Users can pin it with `npx -y github:YOUR_GITHUB_USER/ccswitch-pulse#v0.1.0`.
+
+Issues and pull requests are welcome, especially reports about different CC Switch database versions.
 
 ## License
 

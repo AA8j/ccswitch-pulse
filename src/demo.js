@@ -1,10 +1,10 @@
 const NAMES = [
-  "gpt-5.6",
-  "claude-opus-4.8",
-  "claude-sonnet-4.7",
-  "gemini-3.6-pro",
-  "glm-5.1",
-  "kimi-k2.5",
+  "GPT · Flagship",
+  "Claude · Sonnet",
+  "Gemini · Pro",
+  "GLM · Coding",
+  "Kimi · Thinking",
+  "DeepSeek · Reasoner",
 ];
 const HOUR = 3600;
 const end = Math.floor(Date.now() / 1000 / HOUR) * HOUR + HOUR;
@@ -27,7 +27,7 @@ for (let hour = start; hour < end; hour += HOUR) {
     records.push({
       time: hour,
       model: NAMES[i],
-      requestModel: i === 4 ? "claude-sonnet-4.7" : NAMES[i],
+      requestModel: i === 4 ? "Claude · Sonnet" : NAMES[i],
       source: i % 3 === 0 ? "codex_session" : "proxy",
       calls,
       tokens: calls * (1850 + i * 520),
