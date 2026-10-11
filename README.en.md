@@ -15,7 +15,7 @@
 
 ![CCSwitch Pulse dark theme](docs/images/dashboard-dark-en.png)
 
-> Screenshots use synthetic demo data and contain no personal usage records. CCSwitch Pulse targets desktop browsers and supports Chinese, English, light, and dark themes.
+> Screenshots use fixed-anchor synthetic data and contain no personal usage records. Model names and distribution shapes follow the structure of aggregated local usage, not copied records. CCSwitch Pulse targets desktop browsers and supports Chinese, English, light, and dark themes.
 
 ## Quick start
 

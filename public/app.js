@@ -8,6 +8,21 @@ const SHARE_COLORS = {
   dark: ["#73d6c9", "#86a8e6", "#aa93d9", "#dbb66f", "#d88b9d", "#86bb9e"],
   light: ["#2f918b", "#4c74c4", "#795fae", "#a87725", "#b25d76", "#4f8b6e"],
 };
+const MODEL_COLOR_OVERRIDES = {
+  "deepseek-flash": 0,
+  "gpt-6-astra": 1,
+  "gpt-6-sol": 2,
+  "gpt-6.1-sol": 3,
+  "gpt-5.6-luna": 4,
+  "codex-auto-review": 5,
+  "gpt-5.6-sol": 6,
+  "deepseek-v4-pro": 7,
+  "glm-5.3": 8,
+  "qwen3.8-max": 9,
+  "unknown": 10,
+  "grok-4.6": 11,
+};
+
 const COLORS = {
   dark: [
     "#68e2d2",
@@ -165,11 +180,7 @@ function sourceName(source) {
 function colorFor(model) {
   if (!state.colors.has(model)) {
     const normalized = String(model).toLowerCase();
-    const preferred = [
-      ["gpt", 0], ["claude", 1], ["gemini", 2], ["glm", 3],
-      ["kimi", 4], ["deepseek", 5], ["qwen", 6], ["minimax", 7],
-    ].find(([name]) => normalized.includes(name));
-    let index = preferred?.[1];
+    let index = MODEL_COLOR_OVERRIDES[normalized];
     if (index == null) {
       let hash = 2166136261;
       for (const char of normalized) {
@@ -1534,6 +1545,19 @@ function exportReport() {
 $("#report-download").addEventListener("click", exportReport);
 
 let shareCanvas;
+function drawSmoothPath(ctx, points) {
+  if (!points.length) return;
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let index = 0; index < points.length - 1; index++) {
+    const p0 = points[index - 1] || points[index];
+    const p1 = points[index];
+    const p2 = points[index + 1];
+    const p3 = points[index + 2] || p2;
+    const cp1 = { x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6 };
+    const cp2 = { x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6 };
+    ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, p2.x, p2.y);
+  }
+}
 function drawShareCard() {
   const report = state.report;
   if (!report?.current.calls) return null;
@@ -1767,26 +1791,23 @@ function drawShareCard() {
     const fill = ctx.createLinearGradient(0, top, 0, top + height);
     fill.addColorStop(0, light ? "#0c817a44" : "#68e2d244");
     fill.addColorStop(1, light ? "#0c817a00" : "#68e2d200");
+    const points = bins.map((value, index) => ({
+      x: left + (index / (binCount - 1)) * width,
+      y: top + height - (value / max) * (height - 18),
+    }));
     ctx.beginPath();
-    bins.forEach((value, i) => {
-      const x = left + (i / (binCount - 1)) * width;
-      const y = top + height - (value / max) * (height - 18);
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    });
+    drawSmoothPath(ctx, points);
     ctx.lineTo(left + width, top + height);
     ctx.lineTo(left, top + height);
     ctx.closePath();
     ctx.fillStyle = fill;
     ctx.fill();
     ctx.beginPath();
-    bins.forEach((value, i) => {
-      const x = left + (i / (binCount - 1)) * width;
-      const y = top + height - (value / max) * (height - 18);
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    });
+    drawSmoothPath(ctx, points);
     ctx.strokeStyle = accent;
     ctx.lineWidth = 4;
     ctx.lineJoin = "round";
+    ctx.lineCap = "round";
     ctx.stroke();
   }
   if (!mix) {

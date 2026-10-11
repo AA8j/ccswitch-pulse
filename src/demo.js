@@ -1,12 +1,18 @@
 import { summarize } from "./report.js";
 
-const NAMES = [
-  "GPT · Flagship",
-  "Claude · Sonnet",
-  "Gemini · Pro",
-  "GLM · Coding",
-  "Kimi · Thinking",
-  "DeepSeek · Reasoner",
+// The demo profile is derived from an aggregated local usage shape:
+// model names and relative usage patterns are representative, while every
+// timestamp, count, cost, and token total is synthetic and reproducible.
+const MODEL_PROFILES = [
+  { name: "deepseek-flash", weight: 15.0, tokens: 4200, cost: 0.006 },
+  { name: "gpt-6-astra", weight: 5.7, tokens: 2800, cost: 0.082 },
+  { name: "gpt-6-sol", weight: 3.1, tokens: 2600, cost: 0.036 },
+  { name: "gpt-6.1-sol", weight: 2.6, tokens: 3000, cost: 0.033 },
+  { name: "gpt-5.6-luna", weight: 1.5, tokens: 2200, cost: 0.012 },
+  { name: "codex-auto-review", weight: 1.1, tokens: 1800, cost: 0.001 },
+  { name: "gpt-5.6-sol", weight: 0.9, tokens: 2500, cost: 0.025 },
+  { name: "deepseek-v4-pro", weight: 0.74, tokens: 3000, cost: 0.014 },
+  { name: "glm-5.3", weight: 0.15, tokens: 2700, cost: 0.022 },
 ];
 const HOUR = 3600;
 const DAY = 86400;
@@ -22,50 +28,66 @@ const start = end - 30 * DAY;
 const historicalStart = start - 335 * DAY;
 const records = [];
 
+function sourceFor(index, profile) {
+  if (profile.name === "codex-auto-review") return "codex_session";
+  return index % 5 === 0 ? "codex_session" : "proxy";
+}
+
+function requestModelFor(name) {
+  if (name === "gpt-6.1-sol") return "gpt-6-sol";
+  if (name === "gpt-5.6-sol") return "gpt-6-sol";
+  return name;
+}
+
+function pushRecord({ time, profile, index, calls, historical }) {
+  if (calls <= 0) return;
+  records.push({
+    time,
+    model: profile.name,
+    requestModel: requestModelFor(profile.name),
+    source: sourceFor(index, profile),
+    calls,
+    tokens: calls * profile.tokens,
+    cost: calls * profile.cost,
+    historical,
+  });
+}
+
 for (let day = historicalStart; day < start; day += DAY) {
   const index = Math.floor((day - historicalStart) / DAY);
   const weekday = new Date(day * 1000).getUTCDay();
-  const rhythm = weekday === 0 || weekday === 6 ? 0.48 : 1;
-  for (let i = 0; i < NAMES.length; i++) {
-    const migration = i === 0 ? 0.7 + index / 420 : i === 1 ? 1.3 - index / 1000 : 1;
-    const wave = 1 + Math.sin(index * 0.115 + i * 1.3) * 0.17;
-    const calls = Math.max(1, Math.round((176 - i * 14) * rhythm * migration * wave));
-    records.push({
-      time: day + 12 * HOUR,
-      model: NAMES[i],
-      requestModel: i === 4 ? "Claude · Sonnet" : NAMES[i],
-      source: i % 3 === 0 ? "codex_session" : "proxy",
-      calls,
-      tokens: calls * (1750 + i * 440),
-      cost: calls * (0.028 + i * 0.012),
-      historical: true,
-    });
+  const cycle = 0.72 + Math.sin(index * 0.19) * 0.2 + Math.cos(index * 0.047) * 0.12;
+  const weekend = weekday === 0 || weekday === 6 ? 0.48 : 1;
+  const quiet = index % 37 === 0 || index % 53 === 0 ? 0.18 : 1;
+  for (const [profileIndex, profile] of MODEL_PROFILES.entries()) {
+    const modelWave = 1 + Math.sin(index * 0.13 + profileIndex * 1.7) * 0.18;
+    const calls = Math.round(profile.weight * 18 * cycle * weekend * quiet * modelWave);
+    pushRecord({ time: day + 12 * HOUR, profile, index: profileIndex, calls, historical: true });
   }
 }
 
 for (let hour = start; hour < end; hour += HOUR) {
-  const h = new Date(hour * 1000).getUTCHours();
+  const date = new Date(hour * 1000);
+  const hourOfDay = date.getUTCHours();
   const day = Math.floor((hour - start) / DAY);
-  for (let i = 0; i < NAMES.length; i++) {
-    const wave =
-      Math.sin(day * 0.53 + i * 1.7) * 0.35 + Math.cos(h * 0.37 + i) * 0.22;
-    const work = h >= 9 && h <= 22 ? 1 : 0.28;
-    const pulse = day === 12 && h >= 13 && h <= 19 && i === 1 ? 2.4 : 1;
-    const calls = Math.max(
-      0,
-      Math.round((13 - i * 1.45) * work * (1 + wave) * pulse),
+  const weekday = date.getUTCDay();
+  const workWindow = hourOfDay >= 8 && hourOfDay <= 23 ? 1 : 0.16;
+  const weekend = weekday === 0 || weekday === 6 ? 0.42 : 1;
+  const dayWave = 0.82 + Math.sin(day * 0.61) * 0.18 + Math.cos(day * 0.17) * 0.1;
+  const burst =
+    day === 16 && hourOfDay >= 13 && hourOfDay <= 18
+      ? 2.7
+      : day === 24 && hourOfDay >= 9 && hourOfDay <= 12
+        ? 1.9
+        : day === 28 && hourOfDay >= 19 && hourOfDay <= 22
+          ? 1.55
+          : 1;
+  for (const [profileIndex, profile] of MODEL_PROFILES.entries()) {
+    const modelWave = 1 + Math.sin(day * 0.37 + profileIndex * 1.31) * 0.22;
+    const calls = Math.round(
+      profile.weight * 0.95 * workWindow * weekend * dayWave * burst * modelWave,
     );
-    if (!calls) continue;
-    records.push({
-      time: hour,
-      model: NAMES[i],
-      requestModel: i === 4 ? "Claude · Sonnet" : NAMES[i],
-      source: i % 3 === 0 ? "codex_session" : "proxy",
-      calls,
-      tokens: calls * (1850 + i * 520),
-      cost: calls * (0.031 + i * 0.014),
-      historical: false,
-    });
+    pushRecord({ time: hour, profile, index: profileIndex, calls, historical: false });
   }
 }
 
@@ -112,22 +134,14 @@ export function getDemoSeries(range) {
     )
       continue;
     if (row.historical) historicalRows.push(row);
-    const model =
-      range.modelMode === "requested" ? row.requestModel : row.model;
+    const model = range.modelMode === "requested" ? row.requestModel : row.model;
     const origin = range.bucket === 604800 ? 345600 : 0;
     const time =
-      Math.floor((row.time + range.offset - origin) / range.bucket) *
-        range.bucket +
+      Math.floor((row.time + range.offset - origin) / range.bucket) * range.bucket +
       origin -
       range.offset;
     const key = `${time}\u0000${model}`;
-    const entry = grouped.get(key) || {
-      bucket: time,
-      model,
-      calls: 0,
-      tokens: 0,
-      cost: 0,
-    };
+    const entry = grouped.get(key) || { bucket: time, model, calls: 0, tokens: 0, cost: 0 };
     entry.calls += row.calls;
     entry.tokens += row.tokens;
     entry.cost += row.cost;
@@ -141,9 +155,7 @@ export function getDemoSeries(range) {
   totals.cost = Math.round(totals.cost * 1e6) / 1e6;
   return {
     range,
-    rows: [...grouped.values()].sort(
-      (a, b) => a.bucket - b.bucket || a.model.localeCompare(b.model),
-    ),
+    rows: [...grouped.values()].sort((a, b) => a.bucket - b.bucket || a.model.localeCompare(b.model)),
     totals,
     coverage: {
       rawFirst: start,
@@ -186,16 +198,13 @@ export function getDemoReport(range, period = "custom", compare = null) {
     ? { ...daily, from: compare.from, to: compare.to }
     : { ...daily, from: range.from - (range.to - range.from), to: range.from };
   const previous = period === "all" ? null : summarize(getDemoSeries(compareRange));
-  const change = (key) =>
-    previous?.[key] ? (current[key] - previous[key]) / previous[key] : null;
+  const change = (key) => previous?.[key] ? (current[key] - previous[key]) / previous[key] : null;
   return {
     period,
     range,
     current,
     previous,
-    changes: previous
-      ? { calls: change("calls"), tokens: change("tokens"), cost: change("cost") }
-      : null,
+    changes: previous ? { calls: change("calls"), tokens: change("tokens"), cost: change("cost") } : null,
     coverage: currentSeries.coverage,
   };
 }
@@ -213,14 +222,7 @@ export function getDemoSessions(range) {
       continue;
     const day = localDateKey(row.time, range.offset);
     const model = range.modelMode === "requested" ? row.requestModel : row.model;
-    const entry = sessions.get(day) || {
-      first: row.time,
-      last: row.time,
-      calls: 0,
-      tokens: 0,
-      cost: 0,
-      names: new Set(),
-    };
+    const entry = sessions.get(day) || { first: row.time, last: row.time, calls: 0, tokens: 0, cost: 0, names: new Set() };
     entry.first = Math.min(entry.first, row.time);
     entry.last = Math.max(entry.last, row.time);
     entry.calls += row.calls;
@@ -231,15 +233,12 @@ export function getDemoSessions(range) {
   }
   return {
     available: true,
-    rows: [...sessions.values()]
-      .sort((a, b) => b.last - a.last)
-      .slice(0, 12)
-      .map(({ names, ...row }) => ({
-        ...row,
-        models: names.size,
-        modelNames: [...names],
-        cost: Math.round(row.cost * 1e6) / 1e6,
-      })),
+    rows: [...sessions.values()].sort((a, b) => b.last - a.last).slice(0, 12).map(({ names, ...row }) => ({
+      ...row,
+      models: names.size,
+      modelNames: [...names],
+      cost: Math.round(row.cost * 1e6) / 1e6,
+    })),
   };
 }
 
@@ -257,8 +256,7 @@ export function getDemoHeatmap(range) {
     const weekday = local.getUTCDay();
     const hour = local.getUTCHours();
     const key = `${weekday}\u0000${hour}`;
-    const entry =
-      cells.get(key) || { weekday, hour, calls: 0, tokens: 0, cost: 0 };
+    const entry = cells.get(key) || { weekday, hour, calls: 0, tokens: 0, cost: 0 };
     entry.calls += row.calls;
     entry.tokens += row.tokens;
     entry.cost += row.cost;
@@ -266,9 +264,7 @@ export function getDemoHeatmap(range) {
   }
   return {
     available: true,
-    rows: [...cells.values()].sort(
-      (a, b) => a.weekday - b.weekday || a.hour - b.hour,
-    ),
+    rows: [...cells.values()].sort((a, b) => a.weekday - b.weekday || a.hour - b.hour),
     detailOnly: true,
   };
 }
