@@ -74,6 +74,8 @@ npx --yes --prefer-online "github:aa8j/ccswitch-pulse"
 
 ### 使用稳定版本
 
+发布版本 tag 后，可以固定到指定版本：
+
 ```bash
 npx --yes "github:aa8j/ccswitch-pulse#v0.1.1"
 ```

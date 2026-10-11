@@ -74,6 +74,8 @@ npx --yes --prefer-online "github:aa8j/ccswitch-pulse"
 
 ### Use a stable release
 
+After a release tag is published, pin a specific version with:
+
 ```bash
 npx --yes "github:aa8j/ccswitch-pulse#v0.1.1"
 ```
