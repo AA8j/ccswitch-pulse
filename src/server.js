@@ -3,8 +3,9 @@ import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
-import { getMeta, getSeries, getRequests, parseRange } from "./data.js";
-import { getDemoMeta, getDemoSeries, getDemoRequests } from "./demo.js";
+import { getMeta, getSeries, getRequests, getSessions, getHeatmap, parseRange } from "./data.js";
+import { getReport } from "./report.js";
+import { getDemoMeta, getDemoSeries, getDemoRequests, getDemoReport, getDemoSessions, getDemoHeatmap } from "./demo.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(import.meta.url);
@@ -63,7 +64,7 @@ export function createApp({ dbPath, demo = false }) {
       const url = new URL(request.url, `http://${host}`);
       const meta = demo ? getDemoMeta() : getMeta(dbPath);
       if (url.pathname === "/api/meta") return json(response, 200, meta);
-      if (url.pathname === "/api/series" || url.pathname === "/api/requests") {
+      if (["/api/series", "/api/requests", "/api/report", "/api/sessions", "/api/heatmap"].includes(url.pathname)) {
         if (!meta.available)
           return json(response, 404, { error: "CC Switch database not found" });
         const fallback = {
@@ -71,14 +72,33 @@ export function createApp({ dbPath, demo = false }) {
           to: (meta.last || Math.floor(Date.now() / 1000)) + 1,
         };
         const range = parseRange(url.searchParams, fallback);
-        const value =
-          url.pathname === "/api/series"
-            ? demo
-              ? getDemoSeries(range)
-              : getSeries(dbPath, range)
-            : demo
-              ? getDemoRequests(range)
-              : getRequests(dbPath, range);
+        if (range.source === "all" && meta.hasRollups &&
+            (meta.rawFirst == null || range.from < meta.rawFirst) && range.bucket < 86400) {
+          if ((url.searchParams.get("bucket") || "auto") !== "auto")
+            throw new RangeError("Archived usage supports daily resolution or coarser");
+          range.bucket = 86400;
+        }
+        const period = url.searchParams.get("period") || "custom";
+        if (!/^(day|week|month|year|all|custom|rolling)$/.test(period))
+          throw new RangeError("Invalid report period");
+        let compare = null;
+        if (url.searchParams.has("compareFrom") || url.searchParams.has("compareTo")) {
+          const from = Number(url.searchParams.get("compareFrom"));
+          const to = Number(url.searchParams.get("compareTo"));
+          if (!Number.isSafeInteger(from) || !Number.isSafeInteger(to) || to <= from ||
+              to > range.from || to - from > 5 * 366 * 86400)
+            throw new RangeError("Invalid comparison range");
+          compare = { ...range, from, to };
+        }
+        const value = url.pathname === "/api/series"
+          ? demo ? getDemoSeries(range) : getSeries(dbPath, range)
+          : url.pathname === "/api/requests"
+            ? demo ? getDemoRequests(range) : getRequests(dbPath, range)
+            : url.pathname === "/api/report"
+              ? demo ? getDemoReport(range, period, compare) : getReport(dbPath, range, period, compare)
+              : url.pathname === "/api/sessions"
+                ? demo ? getDemoSessions(range) : getSessions(dbPath, range)
+                : demo ? getDemoHeatmap(range) : getHeatmap(dbPath, range);
         return json(response, 200, value);
       }
       const asset = staticFiles.get(url.pathname);

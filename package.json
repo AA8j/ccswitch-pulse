@@ -12,7 +12,12 @@
   "scripts": {
     "start": "node ./bin/ccswitch-pulse.js",
     "test": "node --test",
-    "pack:check": "npm pack --dry-run"
+    "pack:check": "npm pack --dry-run",
+    "check:syntax": "node ./scripts/check-syntax.mjs",
+    "test:coverage": "node --test --experimental-test-coverage",
+    "smoke:cli": "node ./scripts/smoke-cli.mjs",
+    "benchmark": "node ./scripts/benchmark.mjs",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "echarts": "^6.1.0"
@@ -21,7 +26,7 @@
     "bin/",
     "src/",
     "public/",
-    "docs/images/",
+    "docs/",
     "README.md",
     "README.en.md",
     "LICENSE"
@@ -33,5 +38,16 @@
     "sqlite",
     "model-usage"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.64.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aa8j/ccswitch-pulse.git"
+  },
+  "bugs": {
+    "url": "https://github.com/aa8j/ccswitch-pulse/issues"
+  },
+  "homepage": "https://github.com/aa8j/ccswitch-pulse#readme"
 }

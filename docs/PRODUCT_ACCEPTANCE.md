@@ -1,0 +1,75 @@
+# CCSwitch Pulse 产品与发布验收
+
+## 产品定位
+
+让 CC Switch 用量数据成为可回看、可解释、可分享的个人使用记录。核心路径是：选择时段 → 看模型曲线 → 从任意时刻回放 → 阅读周期报告 → 预览并导出分享图。
+
+界面面向桌面浏览器；报告和图片在本机生成；不需要账号、云端服务或大模型文案生成。
+
+## 功能边界与统计口径
+
+| 能力 | 验收口径 |
+| --- | --- |
+| 时间范围 | 近 24 小时、近 7 天、近 30 天、本周、本月、今年、全部和自定义；日历周从周一开始。 |
+| 统计指标 | 调用量、Token、估算美元费用、模型数；费用来自 CC Switch 记录，不作为账单。 |
+| 历史数据 | `proxy_request_logs` 明细与 `usage_daily_rollups` 归档汇总可以合并统计；归档只有日粒度，不能还原小时数据。 |
+| 模型口径 | 实际模型读取 `model`；请求模型优先读取 `request_model`，为空时回退。 |
+| 对比 | 日历周、月、年按上期相同进度比较；没有完整可比时段时不显示百分比。 |
+| 时间回放 | 播放、暂停、逐格、速度、拖动和当前时段排行同步更新。 |
+| 报告 | 展示主力模型、模型构成、活跃天数、峰值、周期日均、趋势和数据覆盖说明；日均按所选时间跨度计算。 |
+| 分享图 | 浏览器本地生成 16:9 PNG；费用默认隐藏；支持预览、下载和复制。Token 节奏模板以 Token 总量为主指标。 |
+| 会话 | 仅聚合有稳定 `session_id` 的导入明细；不暴露 session ID、提示词或响应内容。 |
+| 项目归属 | 当前不展示项目级排名，避免把配置 profile 误当成工作项目。 |
+
+## 数据库契约
+
+当前实现依赖以下表和字段：
+
+### 必需表：`proxy_request_logs`
+
+```text
+created_at
+model
+data_source
+input_tokens
+output_tokens
+cache_read_tokens
+cache_creation_tokens
+total_cost_usd
+```
+
+以下字段为可选字段：
+
+```text
+request_model
+status_code
+session_id
+```
+
+### 可选表：`usage_daily_rollups`
+
+```text
+date
+model
+request_count
+input_tokens
+output_tokens
+cache_read_tokens
+cache_creation_tokens
+total_cost_usd
+```
+
+`request_model` 在归档表中为可选字段。若数据库不满足表结构，应用必须显示可理解的 schema 错误，而不是静默展示不完整数据。
+
+## 发布前必须完成
+
+- [ ] `npm test`、`npm run pack:check` 通过。
+- [ ] 真实 CC Switch 数据库完成脱敏结构和统计核对。
+- [ ] 近期明细、归档-only、混合数据、跨年、边界周和会话聚合均已验证。
+- [ ] 七种快捷范围、任意起点回放、三种图表、双语、主题和分享图均已验证。
+- [ ] 24 小时等短范围不会把未观测的星期/小时标成“安静时段”。
+- [ ] 从干净目录执行 GitHub npx 命令成功。
+- [ ] README、截图、package metadata 和版本号一致。
+- [ ] 提交中没有个人数据库、日志、绝对本机路径或内部协作内容。
+
+完整的执行步骤和证据要求见 [发布清单](RELEASE_CHECKLIST.md)。

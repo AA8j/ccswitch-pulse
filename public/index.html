@@ -22,34 +22,45 @@
           ></span>
           <span><strong>Pulse</strong><small>for CC Switch</small></span>
         </a>
-        <div class="side-caption">WORKSPACE</div>
+        <div class="side-caption"><span>01</span>工作台</div>
         <nav class="side-nav" aria-label="主导航">
-          <a class="side-link active" href="#overview"
-            ><span class="nav-icon">◫</span>总览<span
-              class="nav-indicator"
-            ></span
-          ></a>
-          <a class="side-link" href="#timeline"
-            ><span class="nav-icon">⌁</span>时间回放</a
-          >
-          <a class="side-link" href="#explorer"
-            ><span class="nav-icon">▤</span>调用明细</a
-          >
+          <a class="side-link active" href="#overview">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></span>
+            <span class="nav-label">总览</span><span class="nav-indicator"></span>
+          </a>
+          <a class="side-link" href="#timeline">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 16c3-6 5 2 8-4s5-6 8-4"/><path d="M4 20h16"/></svg></span>
+            <span class="nav-label">时间回放</span>
+          </a>
+          <a class="side-link" href="#report">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4h12v16H6z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></span>
+            <span class="nav-label">周期报告</span>
+          </a>
+          <a class="side-link" href="#rhythm">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="4" height="4" rx="1"/><rect x="10" y="4" width="4" height="4" rx="1"/><rect x="16" y="4" width="4" height="4" rx="1"/><rect x="4" y="10" width="4" height="4" rx="1"/><rect x="10" y="10" width="4" height="4" rx="1"/><rect x="16" y="10" width="4" height="4" rx="1"/><rect x="4" y="16" width="4" height="4" rx="1"/><rect x="10" y="16" width="4" height="4" rx="1"/><rect x="16" y="16" width="4" height="4" rx="1"/></svg></span>
+            <span class="nav-label">使用节奏</span>
+          </a>
+          <a class="side-link" href="#explorer">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 5h14M5 10h14M5 15h9M5 20h14"/></svg></span>
+            <span class="nav-label">调用明细</span>
+          </a>
         </nav>
         <div class="side-bottom">
-          <div class="system-status">
-            <span class="status-light"></span><span>LOCAL · READ ONLY</span>
+          <div class="side-trust-card">
+            <div class="system-status">
+              <span class="status-light"></span><span>LOCAL</span><b>READ ONLY</b>
+            </div>
+            <p>你的用量数据留在本机。<br />看板只读取 CC Switch 数据库。</p>
           </div>
-          <p>你的用量数据留在本机。<br />看板只读取 CC Switch 数据库。</p>
-          <div class="side-version">CCSwitch Pulse <span>v0.1</span></div>
+          <div class="side-version"><span>CCSwitch Pulse</span><span>v0.1</span></div>
         </div>
       </aside>
 
       <main id="overview" class="main-content">
         <header class="topbar">
           <div class="breadcrumb">
-            Workspace <span>/</span> Analytics <span>/</span>
-            <strong>Overview</strong>
+            工作台 <span>/</span> 用量分析 <span>/</span>
+            <strong>总览</strong>
           </div>
           <div class="topbar-right">
             <button
@@ -89,7 +100,7 @@
               </svg>
               <span id="theme-label">日间模式</span>
             </button>
-            <span class="online-dot"></span
+            <span id="online-dot" class="online-dot"></span
             ><span id="db-status">正在连接数据源</span
             ><span class="topbar-divider"></span
             ><span id="last-updated">—</span>
@@ -99,7 +110,7 @@
         <section class="welcome-row">
           <div>
             <div class="eyebrow">
-              <span class="eyebrow-line"></span>MODEL INTELLIGENCE
+              <span class="eyebrow-line"></span>模型观测
               <span class="eyebrow-star">✦</span> <span id="demo-label"></span>
             </div>
             <h1>模型使用，<em>一目了然。</em></h1>
@@ -123,6 +134,7 @@
                 <path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v3h16v-3" /></svg
               >导出 CSV
             </button>
+            <button id="share-button" class="share-button" type="button">生成分享图</button>
           </div>
         </section>
 
@@ -131,6 +143,9 @@
             <button class="preset" data-range="1">24 小时</button>
             <button class="preset active" data-range="7">7 天</button>
             <button class="preset" data-range="30">30 天</button>
+            <button class="preset" data-range="week">本周</button>
+            <button class="preset" data-range="month">本月</button>
+            <button class="preset" data-range="year">今年</button>
             <button class="preset" data-range="all">全部</button>
           </div>
           <span class="filter-separator"></span>
@@ -182,7 +197,7 @@
               <span>总调用量</span><span class="kpi-icon calls">↗</span>
             </div>
             <strong id="kpi-calls">—</strong
-            ><small>所选时间范围内的请求记录</small>
+            ><small id="kpi-calls-note">所选时间范围内的请求记录</small>
             <div class="kpi-accent accent-blue"></div>
           </article>
           <article class="kpi-card">
@@ -198,7 +213,7 @@
               <span>Token 消耗</span><span class="kpi-icon tokens">◈</span>
             </div>
             <strong id="kpi-tokens">—</strong
-            ><small>输入、输出与缓存合计</small>
+            ><small id="kpi-tokens-note">输入、输出与缓存合计</small>
             <div class="kpi-accent accent-teal"></div>
           </article>
           <article class="kpi-card">
@@ -206,7 +221,7 @@
               <span>估算费用</span><span class="kpi-icon cost">$</span>
             </div>
             <strong id="kpi-cost">—</strong
-            ><small>基于 CC Switch 已记录费用</small>
+            ><small id="kpi-cost-note">基于 CC Switch 已记录费用</small>
             <div class="kpi-accent accent-amber"></div>
           </article>
         </section>
@@ -215,9 +230,10 @@
           <article class="panel chart-panel">
             <div class="panel-header chart-header">
               <div>
-                <div class="section-kicker">USAGE OVER TIME</div>
+                <div class="section-kicker">时间趋势</div>
                 <h2>模型调用趋势</h2>
                 <p>观察每个模型在时间轴上的使用变化</p>
+                <span id="timeline-coverage" class="timeline-coverage">—</span>
               </div>
               <div class="chart-controls">
                 <div class="segmented" aria-label="指标">
@@ -250,7 +266,31 @@
                     ▧
                   </button>
                 </div>
+                <label class="model-view-control">
+                  <span>模型视图</span>
+                  <select id="model-view-select" aria-label="模型视图">
+                    <option value="top">Top 5</option>
+                    <option value="all">全部模型</option>
+                  </select>
+                </label>
               </div>
+            </div>
+            <div class="playback" aria-label="时间回放控制">
+              <div class="playback-heading">
+                <div><span class="playback-dot"></span><strong>时间回放</strong><small>拖动进度条，从任意时刻开始</small></div>
+                <span id="playback-time" class="playback-time">—</span>
+              </div>
+              <div class="transport">
+                <button id="step-back" class="transport-icon" aria-label="上一个时段">‹</button>
+                <button id="play-button" class="play-button" aria-label="播放"><span id="play-symbol">▶</span></button>
+                <button id="step-forward" class="transport-icon" aria-label="下一个时段">›</button>
+                <input id="scrubber" type="range" min="0" max="1" value="1" aria-label="回放起点和进度" />
+                <select id="speed-select" aria-label="播放速度">
+                  <option value="0.5">0.5×</option><option value="1" selected>1×</option>
+                  <option value="2">2×</option><option value="4">4×</option>
+                </select>
+              </div>
+              <div class="timeline-labels"><span id="timeline-start">—</span><span id="timeline-end">—</span></div>
             </div>
             <div class="chart-body">
               <div
@@ -270,54 +310,12 @@
               <span class="legend-label">显示模型</span>
               <div id="model-legend" class="model-legend"></div>
             </div>
-            <div class="playback" aria-label="时间回放控制">
-              <div class="playback-heading">
-                <div>
-                  <span class="playback-dot"></span><strong>时间回放</strong
-                  ><small>拖动进度条，从任意时刻开始</small>
-                </div>
-                <span id="playback-time" class="playback-time">—</span>
-              </div>
-              <div class="transport">
-                <button
-                  id="step-back"
-                  class="transport-icon"
-                  aria-label="上一个时段"
-                >
-                  ‹</button
-                ><button id="play-button" class="play-button" aria-label="播放">
-                  <span id="play-symbol">▶</span></button
-                ><button
-                  id="step-forward"
-                  class="transport-icon"
-                  aria-label="下一个时段"
-                >
-                  ›</button
-                ><input
-                  id="scrubber"
-                  type="range"
-                  min="0"
-                  max="1"
-                  value="1"
-                  aria-label="回放起点和进度"
-                /><select id="speed-select" aria-label="播放速度">
-                  <option value="0.5">0.5×</option>
-                  <option value="1" selected>1×</option>
-                  <option value="2">2×</option>
-                  <option value="4">4×</option>
-                </select>
-              </div>
-              <div class="timeline-labels">
-                <span id="timeline-start">—</span
-                ><span id="timeline-end">—</span>
-              </div>
-            </div>
           </article>
 
           <article class="panel ranking-panel">
             <div class="panel-header">
               <div>
-                <div class="section-kicker">AT THIS MOMENT</div>
+                <div class="section-kicker">此刻</div>
                 <h2>当前时段排行</h2>
                 <p id="ranking-time">跟随回放实时更新</p>
               </div>
@@ -332,15 +330,72 @@
               </div>
             </div>
             <div id="ranking-list" class="ranking-list"></div>
+            <div class="ranking-pulse">
+              <div class="ranking-pulse-head"><strong>时段脉搏</strong><small>点击任意时段可跳转回放</small></div>
+              <div id="ranking-pulse-bars" class="ranking-pulse-bars" role="group" aria-label="各时段调用量分布"></div>
+            </div>
             <div class="ranking-foot">点击模型名称，可在主图中显示或隐藏</div>
           </article>
+        </section>
+
+        <section id="report" class="report-section panel" aria-label="周期报告">
+          <div class="report-header">
+            <div><div class="section-kicker">你的脉搏</div><h2>周期报告</h2><p id="report-range">为所选时段生成一份清晰的用量摘要</p></div>
+            <div class="report-header-actions"><span id="report-coverage" class="report-coverage">—</span><button id="report-share" class="share-button" type="button">分享快照</button><button id="report-download" class="share-button" type="button">下载报告</button></div>
+          </div>
+          <div class="report-layout">
+            <div class="report-story">
+              <span class="story-kicker">本期观察</span>
+              <h3 id="report-headline">正在整理这段时间的记录…</h3>
+              <p id="report-subline">—</p>
+              <div class="report-stats">
+                <div><span>活跃天数</span><strong id="report-active">—</strong></div>
+                <div><span>最高峰</span><strong id="report-peak">—</strong></div>
+                <div><span>日均调用</span><strong id="report-average">—</strong></div>
+                <div><span>主力模型</span><strong id="report-leader">—</strong></div>
+              </div>
+              <div id="report-sparkline" class="report-sparkline" aria-label="周期调用趋势"></div>
+              <div id="report-highlights" class="report-highlights" aria-label="周期关键事实"></div>
+            </div>
+            <div class="report-breakdown">
+              <div class="breakdown-heading"><strong>模型使用构成</strong><small>按调用次数</small></div>
+              <div id="report-models" class="report-models"></div>
+              <p id="report-note" class="report-note">费用为 CC Switch 估算值；历史归档汇总与保留明细一同统计。</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="rhythm" class="panel heatmap-panel" aria-label="使用节奏">
+          <div class="panel-header">
+            <div>
+              <div class="section-kicker">使用节奏</div>
+              <h2>你通常什么时候使用模型？</h2>
+              <p>按星期和小时观察调用密度，帮助你发现稳定的工作节奏。</p>
+            </div>
+            <span id="heatmap-note" class="report-coverage">—</span>
+          </div>
+          <div class="rhythm-body">
+            <div class="heatmap-figure">
+              <div id="heatmap-grid" class="heatmap-grid" role="group" aria-label="按星期和小时统计的调用热力图"></div>
+              <div class="heatmap-legend"><span>少</span><i class="level-0"></i><i class="level-1"></i><i class="level-2"></i><i class="level-3"></i><i class="level-4"></i><span>多</span><small id="heatmap-range">—</small></div>
+            </div>
+            <aside class="rhythm-facts" aria-label="节奏要点">
+              <strong class="rhythm-facts-title">节奏要点</strong>
+              <dl id="rhythm-facts"></dl>
+            </aside>
+          </div>
+        </section>
+
+        <section id="sessions" class="panel sessions-panel" aria-label="导入会话">
+          <div class="panel-header"><div><div class="section-kicker">会话视图</div><h2>导入会话</h2><p>仅展示能可靠聚合的会话记录</p></div></div>
+          <div id="session-list" class="session-list"></div>
         </section>
 
         <section id="explorer" class="bottom-grid">
           <article class="panel insights-panel">
             <div class="panel-header">
               <div>
-                <div class="section-kicker">SIGNALS</div>
+                <div class="section-kicker">观察</div>
                 <h2>值得留意的时刻</h2>
               </div>
               <span class="panel-ornament">✦</span>
@@ -350,10 +405,10 @@
           <article class="panel requests-panel">
             <div class="panel-header">
               <div>
-                <div class="section-kicker">RECENT ACTIVITY</div>
+                <div class="section-kicker">最近记录</div>
                 <h2>最近调用</h2>
               </div>
-              <span class="table-count">最近 24 条</span>
+              <span id="table-count" class="table-count">最近 24 条</span>
             </div>
             <div class="table-scroll">
               <table>
@@ -369,6 +424,7 @@
                 <tbody id="requests-body"></tbody>
               </table>
             </div>
+            <p id="table-hint" class="table-hint"></p>
           </article>
         </section>
         <footer class="footer">
@@ -377,6 +433,23 @@
         </footer>
       </main>
     </div>
+    <dialog id="share-dialog" class="share-dialog" aria-labelledby="share-title">
+      <div class="share-dialog-head"><div><span class="section-kicker">分享你的脉搏</span><h2 id="share-title">生成分享图</h2></div><button id="share-close" class="share-close" type="button" aria-label="关闭">×</button></div>
+      <p>分享图在浏览器本地生成。请预览后自行下载或复制。</p>
+      <div class="share-options">
+        <div class="share-theme-field"><span>卡片主题</span><div id="share-template-choices" class="share-template-choices" role="tablist" aria-label="卡片主题">
+          <button type="button" data-share-template="story" class="active">周期故事</button>
+          <button type="button" data-share-template="mix">模型构成</button>
+          <button type="button" data-share-template="rhythm">使用节奏</button>
+          <button type="button" data-share-template="tokens">Token 节奏</button>
+        </div><select id="share-template" hidden><option value="story" selected>周期故事</option><option value="mix">模型构成</option><option value="rhythm">使用节奏</option><option value="tokens">Token 节奏</option></select></div>
+        <label class="share-check"><input id="share-show-tokens" type="checkbox" checked />显示Token</label>
+        <label class="share-check"><input id="share-show-latest" type="checkbox" checked />显示最晚活跃</label>
+        <label class="share-check"><input id="share-show-cost" type="checkbox" />显示估算费用</label>
+      </div>
+      <img id="share-preview" alt="分享图预览" />
+      <div class="share-actions"><button id="share-download" class="primary-button" type="button">下载 PNG</button><button id="share-copy" class="share-button" type="button">复制图片</button></div>
+    </dialog>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
   </body>
 </html>
