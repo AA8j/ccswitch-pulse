@@ -64,7 +64,7 @@ npm start -- --db /path/to/cc-switch.db
 
 ## 更新
 
-当前版本：`v0.1.1`。项目不会自动更新本地程序，避免在没有确认的情况下改变数据读取逻辑；更新由你显式选择版本。
+当前版本：`v0.1.2`。项目不会自动更新本地程序，避免在没有确认的情况下改变数据读取逻辑；更新由你显式选择版本。
 
 ### 使用最新主线
 
@@ -77,7 +77,7 @@ npx --yes --prefer-online "github:aa8j/ccswitch-pulse"
 发布版本 tag 后，可以固定到指定版本：
 
 ```bash
-npx --yes "github:aa8j/ccswitch-pulse#v0.1.1"
+npx --yes "github:aa8j/ccswitch-pulse#v0.1.2"
 ```
 
 ### 更新本地源码

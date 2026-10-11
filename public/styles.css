@@ -723,8 +723,9 @@ a {
   color: #eff8fb;
 }
 .segmented.compact button {
-  font-size: 17px;
-  line-height: 10px;
+  min-width: 54px;
+  font-size: 10px;
+  line-height: 12px;
   padding: 7px 9px;
 }
 .chart-body {
@@ -1258,6 +1259,20 @@ th:last-child {
     margin-top: 0;
   }
 }
+@media (max-width: 1060px) {
+  .chart-header {
+    flex-wrap: wrap;
+  }
+  .chart-controls {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .chart-controls .model-view-control {
+    margin-left: auto;
+  }
+}
+
 @media (max-width: 750px) {
   .app-shell {
     display: block;

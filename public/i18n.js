@@ -109,6 +109,9 @@
     折线图: "Line chart",
     分组柱状图: "Grouped bars",
     堆叠柱状图: "Stacked bars",
+    折线: "Line",
+    分组: "Grouped",
+    堆叠: "Stacked",
     不同模型随时间变化的用量图: "Usage by model over time",
     这里还没有用量数据: "No usage data yet",
     "调整筛选条件，或确认 CC Switch 已记录调用。":
