@@ -236,7 +236,13 @@ async function fetchJson(url) {
   return data;
 }
 
+function resetModelSelection() {
+  state.selected = new Set();
+  state.legendExpanded = false;
+}
+
 function setPreset(days, load = true) {
+  resetModelSelection();
   if (!state.meta?.available) return;
   state.preset = String(days);
   const source = $("#source-select").value;
@@ -1936,12 +1942,14 @@ $("#apply-button").addEventListener("click", () => {
     toast(t("invalidRange"));
     return;
   }
+  resetModelSelection();
   state.range = { from, to };
   state.preset = null;
   $$(".preset").forEach((button) => button.classList.remove("active"));
   loadData();
 });
 $("#source-select").addEventListener("change", () => {
+  resetModelSelection();
   if (state.preset === "all") setPreset("all"); else loadData();
 });
 ["#model-mode", "#bucket-select"].forEach((selector) =>

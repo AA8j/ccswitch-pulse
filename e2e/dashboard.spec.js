@@ -45,3 +45,16 @@ test("language and theme changes preserve the active range", async ({ page }) =>
   await page.locator("#theme-toggle").click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", themeBefore === "light" ? "dark" : "light");
 });
+
+
+test("range changes reset the default Top 5 model selection", async ({ page }) => {
+  await waitForDashboard(page);
+  await expect(page.locator("#model-view-select")).toHaveValue("top");
+  await expect(page.locator(".legend-chip[aria-pressed=\"true\"]")).toHaveCount(5);
+  await page.locator('[data-range="year"]').click();
+  await expect(page.locator("#range-summary")).not.toContainText(/查询失败|Query failed/);
+  await expect(page.locator(".legend-chip[aria-pressed=\"true\"]")).toHaveCount(5);
+  await page.locator('[data-range="all"]').click();
+  await expect(page.locator("#range-summary")).not.toContainText(/查询失败|Query failed/);
+  await expect(page.locator(".legend-chip[aria-pressed=\"true\"]")).toHaveCount(5);
+});
