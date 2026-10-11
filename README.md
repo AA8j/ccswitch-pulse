@@ -62,6 +62,33 @@ npm start -- --db /path/to/cc-switch.db
 
 **环境要求：** Node.js 24.6+、npm/npx 和桌面浏览器。服务只监听 `127.0.0.1`，数据留在本机。
 
+## 更新
+
+当前版本：`v0.1.1`。项目不会自动更新本地程序，避免在没有确认的情况下改变数据读取逻辑；更新由你显式选择版本。
+
+### 使用最新主线
+
+```bash
+npx --yes --prefer-online "github:aa8j/ccswitch-pulse"
+```
+
+### 使用稳定版本
+
+```bash
+npx --yes "github:aa8j/ccswitch-pulse#v0.1.1"
+```
+
+### 更新本地源码
+
+```bash
+git pull --ff-only
+npm ci
+npm test
+npm start
+```
+
+更新只替换程序和依赖，不会写入 CC Switch 数据库。
+
 ## 功能
 
 | 你想了解什么 | CCSwitch Pulse 提供什么 |

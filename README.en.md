@@ -62,6 +62,33 @@ npm start -- --db /path/to/cc-switch.db
 
 **Requirements:** Node.js 24.6+, npm/npx, and a desktop browser. The service listens only on `127.0.0.1`; data stays local.
 
+## Updating
+
+Current version: `v0.1.1`. The project does not auto-update local installations; updates are explicit so a data-reading change never happens unexpectedly.
+
+### Track the latest main branch
+
+```bash
+npx --yes --prefer-online "github:aa8j/ccswitch-pulse"
+```
+
+### Use a stable release
+
+```bash
+npx --yes "github:aa8j/ccswitch-pulse#v0.1.1"
+```
+
+### Update a local checkout
+
+```bash
+git pull --ff-only
+npm ci
+npm test
+npm start
+```
+
+Updating replaces the program and dependencies; it never writes to the CC Switch database.
+
 ## Features
 
 | What you want to know | What CCSwitch Pulse provides |
