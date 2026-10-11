@@ -170,6 +170,21 @@ function inputDate(seconds) {
   const p = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
+function setDateControl(prefix, seconds) {
+  const value = inputDate(seconds);
+  const [date, time] = value.split("T");
+  $(`#date-${prefix}`).value = value;
+  $(`#date-${prefix}-date`).value = date;
+  $(`#date-${prefix}-time`).value = time;
+}
+function readDateControl(prefix) {
+  const date = $(`#date-${prefix}-date`).value;
+  const time = $(`#date-${prefix}-time`).value;
+  if (!date || !time) return NaN;
+  const value = `${date}T${time}`;
+  $(`#date-${prefix}`).value = value;
+  return Math.floor(new Date(value).getTime() / 1000);
+}
 function sourceName(source) {
   return source === "proxy"
     ? t("sourceProxy")
@@ -272,8 +287,8 @@ function setPreset(days, load = true) {
       ? Math.floor(start.getTime() / 1000)
       : sourceTo - Number(days) * 86400;
   state.range = { from, to: sourceTo };
-  $("#date-from").value = inputDate(from);
-  $("#date-to").value = inputDate(sourceTo);
+  setDateControl("from", from);
+  setDateControl("to", sourceTo);
   $$(".preset").forEach((button) =>
     button.classList.toggle("active", button.dataset.range === String(days)),
   );
@@ -1935,9 +1950,13 @@ $("#share-copy").addEventListener("click", async () => {
 $$(".preset").forEach((button) =>
   button.addEventListener("click", () => setPreset(button.dataset.range)),
 );
+for (const prefix of ["from", "to"]) {
+  $(`#date-${prefix}-date`).addEventListener("input", () => readDateControl(prefix));
+  $(`#date-${prefix}-time`).addEventListener("input", () => readDateControl(prefix));
+}
 $("#apply-button").addEventListener("click", () => {
-  const from = Math.floor(new Date($("#date-from").value).getTime() / 1000),
-    to = Math.floor(new Date($("#date-to").value).getTime() / 1000);
+  const from = readDateControl("from"),
+    to = readDateControl("to");
   if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) {
     toast(t("invalidRange"));
     return;

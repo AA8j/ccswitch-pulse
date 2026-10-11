@@ -485,28 +485,50 @@ a {
   gap: 8px;
   min-width: 0;
 }
-.date-control span {
+.date-control > span {
   font-size: 10px;
   color: #7c90a7;
   white-space: nowrap;
 }
-.date-control input {
-  width: 158px;
+.date-input-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   min-width: 0;
+  padding: 3px;
   background: #0d1724;
-  color: #c6d5e6;
   border: 1px solid #2b3d53;
-  border-radius: 7px;
-  padding: 7px 8px;
+  border-radius: 9px;
+}
+.date-input-group input[type="date"] {
+  width: 125px;
+}
+.date-input-group input[type="time"] {
+  width: 78px;
+}
+.date-input-group input[type="date"],
+.date-input-group input[type="time"] {
+  min-width: 0;
+  background: transparent;
+  color: #c6d5e6;
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 5px;
   font-size: 10px;
   outline: none;
+  color-scheme: dark;
 }
-.date-control input:focus {
+.date-input-group:focus-within {
   border-color: var(--teal);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--teal) 16%, transparent);
 }
-.date-control input::-webkit-calendar-picker-indicator {
+.date-input-group input::-webkit-calendar-picker-indicator {
   filter: invert(0.7);
   cursor: pointer;
+}
+.date-input-group input[type="date"]::-webkit-datetime-edit,
+.date-input-group input[type="time"]::-webkit-datetime-edit {
+  color: #c6d5e6;
 }
 .date-arrow {
   font-size: 13px;
@@ -1227,8 +1249,11 @@ th:last-child {
   .filter-panel {
     flex-wrap: wrap;
   }
-  .date-control input {
-    width: 160px;
+  .date-input-group input[type="date"] {
+    width: 126px;
+  }
+  .date-input-group input[type="time"] {
+    width: 78px;
   }
   .filter-separator {
     display: none;
@@ -1374,8 +1399,12 @@ th:last-child {
   .date-control span {
     display: none;
   }
-  .date-control input {
-    width: 100%;
+  .date-input-group {
+    flex: 1;
+  }
+  .date-input-group input[type="date"] {
+    flex: 1;
+    width: auto;
   }
   .apply-button {
     margin-left: 0;
@@ -1602,14 +1631,15 @@ th:last-child {
 :root[data-theme="light"] .select-wrap span {
   color: #657d8a;
 }
-:root[data-theme="light"] .date-control input {
+:root[data-theme="light"] .date-input-group {
   background: #f7fafb;
-  color: #294756;
   border-color: #d3e2e6;
 }
-:root[data-theme="light"]
-  .date-control
-  input::-webkit-calendar-picker-indicator {
+:root[data-theme="light"] .date-input-group input {
+  color: #294756;
+  color-scheme: light;
+}
+:root[data-theme="light"] .date-input-group input::-webkit-datetime-edit {
   filter: none;
 }
 :root[data-theme="light"] .date-arrow,

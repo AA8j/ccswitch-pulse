@@ -149,15 +149,23 @@
             <button class="preset" data-range="all">全部</button>
           </div>
           <span class="filter-separator"></span>
-          <label class="date-control"
-            ><span>起始</span
-            ><input id="date-from" type="datetime-local" aria-label="起始时间"
-          /></label>
-          <span class="date-arrow">→</span>
-          <label class="date-control"
-            ><span>结束</span
-            ><input id="date-to" type="datetime-local" aria-label="结束时间"
-          /></label>
+          <label class="date-control">
+            <span>起始</span>
+            <div class="date-input-group">
+              <input id="date-from" type="hidden" />
+              <input id="date-from-date" type="date" aria-label="起始日期" />
+              <input id="date-from-time" type="time" step="60" aria-label="起始时间" />
+            </div>
+          </label>
+          <span class="date-arrow" aria-hidden="true">→</span>
+          <label class="date-control">
+            <span>结束</span>
+            <div class="date-input-group">
+              <input id="date-to" type="hidden" />
+              <input id="date-to-date" type="date" aria-label="结束日期" />
+              <input id="date-to-time" type="time" step="60" aria-label="结束时间" />
+            </div>
+          </label>
           <button id="apply-button" class="apply-button">应用</button>
         </section>
 
