@@ -170,21 +170,133 @@ function inputDate(seconds) {
   const p = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
+const datePickerState = { prefix: null, year: 0, month: 0 };
+function formatDateControlDate(seconds) {
+  if (!Number.isFinite(seconds)) return "—";
+  const date = new Date(seconds * 1000);
+  return new Intl.DateTimeFormat(language() === "zh" ? "zh-CN" : "en-US", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
 function setDateControl(prefix, seconds) {
   const value = inputDate(seconds);
   const [date, time] = value.split("T");
   $(`#date-${prefix}`).value = value;
-  $(`#date-${prefix}-date`).value = date;
+  $(`#date-${prefix}-trigger`).textContent = formatDateControlDate(seconds);
+  $(`#date-${prefix}-trigger`).dataset.value = date;
   $(`#date-${prefix}-time`).value = time;
 }
 function readDateControl(prefix) {
-  const date = $(`#date-${prefix}-date`).value;
+  const hidden = $(`#date-${prefix}`).value;
+  const date = hidden.split("T")[0];
   const time = $(`#date-${prefix}-time`).value;
-  if (!date || !time) return NaN;
+  if (!date || !/^\d{2}:\d{2}$/.test(time)) return NaN;
   const value = `${date}T${time}`;
+  const seconds = Math.floor(new Date(value).getTime() / 1000);
+  if (!Number.isFinite(seconds)) return NaN;
   $(`#date-${prefix}`).value = value;
-  return Math.floor(new Date(value).getTime() / 1000);
+  return seconds;
 }
+function closeDatePicker() {
+  datePickerState.prefix = null;
+  $("#date-picker-popover").hidden = true;
+}
+function renderDatePicker() {
+  const popover = $("#date-picker-popover");
+  if (!datePickerState.prefix) return;
+  const { year, month, prefix } = datePickerState;
+  const selectedValue = $(`#date-${prefix}`).value.split("T")[0];
+  const selected = selectedValue ? new Date(`${selectedValue}T12:00`) : null;
+  const first = new Date(year, month, 1);
+  const firstDay = first.getDay();
+  const days = new Date(year, month + 1, 0).getDate();
+  const previousDays = new Date(year, month, 0).getDate();
+  const weekdays = language() === "zh" ? ["日", "一", "二", "三", "四", "五", "六"] : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const monthLabel = new Intl.DateTimeFormat(language() === "zh" ? "zh-CN" : "en-US", { year: "numeric", month: "long" }).format(first);
+  popover.replaceChildren();
+  const header = document.createElement("div");
+  header.className = "date-picker-header";
+  const title = document.createElement("strong");
+  title.textContent = monthLabel;
+  const actions = document.createElement("div");
+  for (const [label, delta] of [[t("datePreviousMonth"), -1], [t("dateNextMonth"), 1]]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "date-picker-nav";
+    button.textContent = delta < 0 ? "‹" : "›";
+    button.setAttribute("aria-label", label);
+    button.addEventListener("click", () => {
+      datePickerState.month += delta;
+      if (datePickerState.month < 0) { datePickerState.month = 11; datePickerState.year--; }
+      if (datePickerState.month > 11) { datePickerState.month = 0; datePickerState.year++; }
+      renderDatePicker();
+    });
+    actions.append(button);
+  }
+  header.append(title, actions);
+  const week = document.createElement("div");
+  week.className = "date-picker-week";
+  for (const day of weekdays) { const cell = document.createElement("span"); cell.textContent = day; week.append(cell); }
+  const grid = document.createElement("div");
+  grid.className = "date-picker-grid";
+  const total = Math.ceil((firstDay + days) / 7) * 7;
+  for (let index = 0; index < total; index++) {
+    const dayOffset = index - firstDay + 1;
+    const isCurrent = dayOffset >= 1 && dayOffset <= days;
+    const day = isCurrent ? dayOffset : dayOffset < 1 ? previousDays + dayOffset : dayOffset - days;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `date-picker-day${isCurrent ? "" : " outside"}`;
+    button.textContent = String(day);
+    if (isCurrent && selected && selected.getFullYear() === year && selected.getMonth() === month && selected.getDate() === day) button.classList.add("selected");
+    if (isCurrent && new Date().getFullYear() === year && new Date().getMonth() === month && new Date().getDate() === day) button.classList.add("today");
+    button.disabled = !isCurrent;
+    if (isCurrent) {
+      button.addEventListener("click", () => {
+        const current = $(`#date-${prefix}`).value ? new Date($(`#date-${prefix}`).value) : new Date();
+        current.setFullYear(year, month, day);
+        setDateControl(prefix, Math.floor(current.getTime() / 1000));
+        closeDatePicker();
+      });
+    }
+    grid.append(button);
+  }
+  const footer = document.createElement("div");
+  footer.className = "date-picker-footer";
+  for (const [label, action] of [[t("dateClear"), () => { $(`#date-${prefix}`).value = ""; $(`#date-${prefix}-trigger`).textContent = "—"; $(`#date-${prefix}-trigger`).dataset.value = ""; closeDatePicker(); }], [t("dateToday"), () => { setDateControl(prefix, Math.floor(Date.now() / 60000) * 60); closeDatePicker(); }]]) {
+    const button = document.createElement("button");
+    button.type = "button"; button.className = "date-picker-footer-button"; button.textContent = label; button.addEventListener("click", action); footer.append(button);
+  }
+  popover.append(header, week, grid, footer);
+  popover.hidden = false;
+}
+function openDatePicker(prefix) {
+  const current = $(`#date-${prefix}`).value ? new Date($(`#date-${prefix}`).value) : new Date();
+  datePickerState.prefix = prefix;
+  datePickerState.year = current.getFullYear();
+  datePickerState.month = current.getMonth();
+  const popover = $("#date-picker-popover");
+  const trigger = $(`#date-${prefix}-trigger`);
+  const panel = $("#date-filter-panel") || $(".filter-panel");
+  const panelRect = panel.getBoundingClientRect();
+  const triggerRect = trigger.getBoundingClientRect();
+  const left = Math.max(8, Math.min(triggerRect.left - panelRect.left, panel.clientWidth - 312));
+  popover.style.left = `${left}px`;
+  renderDatePicker();
+}
+function refreshDateControlLabels() {
+  for (const prefix of ["from", "to"]) {
+    const value = $(`#date-${prefix}`).value;
+    if (value) {
+      const seconds = Math.floor(new Date(value).getTime() / 1000);
+      $(`#date-${prefix}-trigger`).textContent = formatDateControlDate(seconds);
+    }
+  }
+  if (datePickerState.prefix) renderDatePicker();
+}
+
 function sourceName(source) {
   return source === "proxy"
     ? t("sourceProxy")
@@ -1951,9 +2063,14 @@ $$(".preset").forEach((button) =>
   button.addEventListener("click", () => setPreset(button.dataset.range)),
 );
 for (const prefix of ["from", "to"]) {
-  $(`#date-${prefix}-date`).addEventListener("input", () => readDateControl(prefix));
+  $(`#date-${prefix}-trigger`).addEventListener("click", () => openDatePicker(prefix));
   $(`#date-${prefix}-time`).addEventListener("input", () => readDateControl(prefix));
 }
+$("#date-picker-popover").addEventListener("click", (event) => event.stopPropagation());
+document.addEventListener("click", (event) => {
+  if (datePickerState.prefix && !event.target.closest(".date-control") && !event.target.closest("#date-picker-popover")) closeDatePicker();
+});
+document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeDatePicker(); });
 $("#apply-button").addEventListener("click", () => {
   const from = readDateControl("from"),
     to = readDateControl("to");
@@ -2053,6 +2170,7 @@ window.addEventListener("pulse-language-change", () => {
   updateThemeControl();
   renderMetaLabels();
   updateShareTemplateChoices();
+  refreshDateControlLabels();
   if (state.range && state.series)
     setText(
       "#range-summary",

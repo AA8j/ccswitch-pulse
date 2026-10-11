@@ -61,9 +61,11 @@ test("range changes reset the default Top 5 model selection", async ({ page }) =
 
 test("custom date controls are editable and apply a local range", async ({ page }) => {
   await waitForDashboard(page);
-  await page.locator("#date-from-date").fill("2026-10-01");
+  await page.locator("#date-from-trigger").click();
+  await page.locator(".date-picker-day:not(.outside)").filter({ hasText: /^1$/ }).click();
   await page.locator("#date-from-time").fill("08:15");
-  await page.locator("#date-to-date").fill("2026-10-03");
+  await page.locator("#date-to-trigger").click();
+  await page.locator(".date-picker-day:not(.outside)").filter({ hasText: /^3$/ }).click();
   await page.locator("#date-to-time").fill("19:45");
   await page.locator("#apply-button").click();
   await expect(page.locator("#date-from")).toHaveValue("2026-10-01T08:15");

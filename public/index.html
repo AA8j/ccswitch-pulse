@@ -153,8 +153,8 @@
             <span>起始</span>
             <div class="date-input-group">
               <input id="date-from" type="hidden" />
-              <input id="date-from-date" type="date" aria-label="起始日期" />
-              <input id="date-from-time" type="time" step="60" aria-label="起始时间" />
+              <button id="date-from-trigger" class="date-trigger" type="button" aria-label="起始日期" aria-haspopup="dialog">—</button>
+              <input id="date-from-time" class="time-input" type="text" inputmode="numeric" maxlength="5" placeholder="00:00" aria-label="起始时间" />
             </div>
           </label>
           <span class="date-arrow" aria-hidden="true">→</span>
@@ -162,11 +162,12 @@
             <span>结束</span>
             <div class="date-input-group">
               <input id="date-to" type="hidden" />
-              <input id="date-to-date" type="date" aria-label="结束日期" />
-              <input id="date-to-time" type="time" step="60" aria-label="结束时间" />
+              <button id="date-to-trigger" class="date-trigger" type="button" aria-label="结束日期" aria-haspopup="dialog">—</button>
+              <input id="date-to-time" class="time-input" type="text" inputmode="numeric" maxlength="5" placeholder="00:00" aria-label="结束时间" />
             </div>
           </label>
           <button id="apply-button" class="apply-button">应用</button>
+          <div id="date-picker-popover" class="date-picker-popover" role="dialog" aria-label="日期选择" hidden></div>
         </section>
 
         <section class="subfilters" aria-label="统计口径">
