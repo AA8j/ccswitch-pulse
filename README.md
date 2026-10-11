@@ -46,7 +46,7 @@ npm start -- --demo
 npm start -- --db /path/to/cc-switch.db
 ```
 
-**环境要求：**Node.js 24.6+、npm/npx 和桌面浏览器。服务只监听 `127.0.0.1`，数据留在本机。
+**环境要求：** Node.js 24.6+、npm/npx 和桌面浏览器。服务只监听 `127.0.0.1`，数据留在本机。
 
 ## 功能
 
@@ -93,12 +93,12 @@ npm start -- --db /path/to/cc-switch.db
 
 ## 数据与隐私
 
-- **只读数据库：**使用 Node 内置 SQLite 只读打开 CC Switch 数据库，不执行迁移和写入。
-- **本地服务：**服务绑定 `127.0.0.1`，静态资源和 ECharts 使用本地依赖，不依赖外部 CDN。
-- **API 边界：**只提供 GET / HEAD 查询，不返回 prompt、response、session ID、项目路径或 provider 配置。
-- **统计定义：**Token 包含输入、输出、缓存读取和缓存创建；费用是 CC Switch 已记录的估算美元值，不是供应商账单。
-- **历史边界：**`usage_daily_rollups` 没有 `data_source` 和 `session_id` 维度，因此来源筛选、近期调用和会话视图只针对保留明细。
-- **分享隐私：**图片只包含选定范围的聚合数据；费用默认隐藏，Token 和最晚活跃可以单独关闭。
+- **只读数据库：** 使用 Node 内置 SQLite 只读打开 CC Switch 数据库，不执行迁移和写入。
+- **本地服务：** 服务绑定 `127.0.0.1`，静态资源和 ECharts 使用本地依赖，不依赖外部 CDN。
+- **API 边界：** 只提供 GET / HEAD 查询，不返回 prompt、response、session ID、项目路径或 provider 配置。
+- **统计定义：** Token 包含输入、输出、缓存读取和缓存创建；费用是 CC Switch 已记录的估算美元值，不是供应商账单。
+- **历史边界：** `usage_daily_rollups` 没有 `data_source` 和 `session_id` 维度，因此来源筛选、近期调用和会话视图只针对保留明细。
+- **分享隐私：** 图片只包含选定范围的聚合数据；费用默认隐藏，Token 和最晚活跃可以单独关闭。
 
 数据库支持的必需字段、可选字段和兼容策略见[数据库支持范围](docs/SCHEMA_SUPPORT.md)。
 
