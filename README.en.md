@@ -21,7 +21,13 @@
 
 ### Run directly
 
-The project is distributed from its GitHub repository; it does not need to be published to npm first. `npx` installs the repository CLI and runs it.
+The project is distributed from its GitHub repository; it does not need to be published to npm first. The default command reads the local CC Switch database:
+
+```bash
+npx -y "github:aa8j/ccswitch-pulse"
+```
+
+Without a database, use synthetic demo data:
 
 ```bash
 npx -y "github:aa8j/ccswitch-pulse" --demo
@@ -33,6 +39,12 @@ npx -y "github:aa8j/ccswitch-pulse" --demo
 git clone https://github.com/aa8j/ccswitch-pulse.git
 cd ccswitch-pulse
 npm ci
+npm start
+```
+
+Run the local demo with:
+
+```bash
 npm start -- --demo
 ```
 

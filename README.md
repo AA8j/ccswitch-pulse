@@ -19,9 +19,15 @@
 
 ## 快速开始
 
-### 直接体验
+### 直接运行
 
-项目通过 GitHub 仓库分发，无需先发布到 npm。`npx` 会安装仓库中的 CLI 并执行它。
+项目通过 GitHub 仓库分发，无需先发布到 npm。默认读取本机 CC Switch 数据库：
+
+```bash
+npx -y "github:aa8j/ccswitch-pulse"
+```
+
+没有数据库时，使用演示数据：
 
 ```bash
 npx -y "github:aa8j/ccswitch-pulse" --demo
@@ -33,6 +39,12 @@ npx -y "github:aa8j/ccswitch-pulse" --demo
 git clone https://github.com/aa8j/ccswitch-pulse.git
 cd ccswitch-pulse
 npm ci
+npm start
+```
+
+本地预览演示数据：
+
+```bash
 npm start -- --demo
 ```
 
