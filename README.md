@@ -19,7 +19,9 @@
 
 ## 快速开始
 
-### GitHub 运行
+### 直接体验
+
+项目通过 GitHub 仓库分发，无需先发布到 npm。`npx` 会安装仓库中的 CLI 并执行它。
 
 ```bash
 npx -y "github:aa8j/ccswitch-pulse" --demo

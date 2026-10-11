@@ -19,7 +19,9 @@
 
 ## Quick start
 
-### Run from GitHub
+### Run directly
+
+The project is distributed from its GitHub repository; it does not need to be published to npm first. `npx` installs the repository CLI and runs it.
 
 ```bash
 npx -y "github:aa8j/ccswitch-pulse" --demo
