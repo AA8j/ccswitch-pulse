@@ -199,9 +199,22 @@ function readDateControl(prefix) {
   $(`#date-${prefix}`).value = value;
   return seconds;
 }
-function closeDatePicker() {
+function closeDatePicker(restoreFocus = false) {
+  const prefix = datePickerState.prefix;
   datePickerState.prefix = null;
   $("#date-picker-popover").hidden = true;
+  for (const name of ["from", "to"]) $(`#date-${name}-trigger`).setAttribute("aria-expanded", "false");
+  if (restoreFocus && prefix) $(`#date-${prefix}-trigger`).focus();
+}
+function positionDatePicker() {
+  if (!datePickerState.prefix) return;
+  const popover = $("#date-picker-popover");
+  const panel = $(".filter-panel");
+  const panelRect = panel.getBoundingClientRect();
+  const anchorRect = $(`#date-${datePickerState.prefix}-trigger`).closest(".date-input-group").getBoundingClientRect();
+  const left = Math.max(8, Math.min(anchorRect.left - panelRect.left - panel.clientLeft, panel.clientWidth - popover.offsetWidth - 8));
+  popover.style.left = `${left}px`;
+  popover.style.top = `${anchorRect.bottom - panelRect.top - panel.clientTop + 8}px`;
 }
 function renderDatePicker() {
   const popover = $("#date-picker-popover");
@@ -258,32 +271,28 @@ function renderDatePicker() {
         const current = $(`#date-${prefix}`).value ? new Date($(`#date-${prefix}`).value) : new Date();
         current.setFullYear(year, month, day);
         setDateControl(prefix, Math.floor(current.getTime() / 1000));
-        closeDatePicker();
+        closeDatePicker(true);
       });
     }
     grid.append(button);
   }
   const footer = document.createElement("div");
   footer.className = "date-picker-footer";
-  for (const [label, action] of [[t("dateClear"), () => { $(`#date-${prefix}`).value = ""; $(`#date-${prefix}-trigger`).textContent = "—"; $(`#date-${prefix}-trigger`).dataset.value = ""; closeDatePicker(); }], [t("dateToday"), () => { setDateControl(prefix, Math.floor(Date.now() / 60000) * 60); closeDatePicker(); }]]) {
+  for (const [label, action] of [[t("dateClear"), () => { $(`#date-${prefix}`).value = ""; $(`#date-${prefix}-trigger`).textContent = "—"; $(`#date-${prefix}-trigger`).dataset.value = ""; closeDatePicker(true); }], [t("dateToday"), () => { setDateControl(prefix, Math.floor(Date.now() / 60000) * 60); closeDatePicker(true); }]]) {
     const button = document.createElement("button");
     button.type = "button"; button.className = "date-picker-footer-button"; button.textContent = label; button.addEventListener("click", action); footer.append(button);
   }
   popover.append(header, week, grid, footer);
   popover.hidden = false;
+  positionDatePicker();
 }
 function openDatePicker(prefix) {
+  if (datePickerState.prefix === prefix) { closeDatePicker(); return; }
   const current = $(`#date-${prefix}`).value ? new Date($(`#date-${prefix}`).value) : new Date();
   datePickerState.prefix = prefix;
   datePickerState.year = current.getFullYear();
   datePickerState.month = current.getMonth();
-  const popover = $("#date-picker-popover");
-  const trigger = $(`#date-${prefix}-trigger`);
-  const panel = $("#date-filter-panel") || $(".filter-panel");
-  const panelRect = panel.getBoundingClientRect();
-  const triggerRect = trigger.getBoundingClientRect();
-  const left = Math.max(8, Math.min(triggerRect.left - panelRect.left, panel.clientWidth - 312));
-  popover.style.left = `${left}px`;
+  for (const name of ["from", "to"]) $(`#date-${name}-trigger`).setAttribute("aria-expanded", String(name === prefix));
   renderDatePicker();
 }
 function refreshDateControlLabels() {
@@ -2070,7 +2079,8 @@ $("#date-picker-popover").addEventListener("click", (event) => event.stopPropaga
 document.addEventListener("click", (event) => {
   if (datePickerState.prefix && !event.target.closest(".date-control") && !event.target.closest("#date-picker-popover")) closeDatePicker();
 });
-document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeDatePicker(); });
+document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeDatePicker(true); });
+window.addEventListener("resize", positionDatePicker);
 $("#apply-button").addEventListener("click", () => {
   const from = readDateControl("from"),
     to = readDateControl("to");

@@ -61,6 +61,8 @@ test("range changes reset the default Top 5 model selection", async ({ page }) =
 
 test("custom date controls are editable and apply a local range", async ({ page }) => {
   await waitForDashboard(page);
+  const fromMonth = (await page.locator("#date-from").inputValue()).slice(0, 7);
+  const toMonth = (await page.locator("#date-to").inputValue()).slice(0, 7);
   await page.locator("#date-from-trigger").click();
   await page.locator(".date-picker-day:not(.outside)").filter({ hasText: /^1$/ }).click();
   await page.locator("#date-from-time").fill("08:15");
@@ -68,20 +70,89 @@ test("custom date controls are editable and apply a local range", async ({ page 
   await page.locator(".date-picker-day:not(.outside)").filter({ hasText: /^3$/ }).click();
   await page.locator("#date-to-time").fill("19:45");
   await page.locator("#apply-button").click();
-  await expect(page.locator("#date-from")).toHaveValue("2026-10-01T08:15");
-  await expect(page.locator("#date-to")).toHaveValue("2026-10-03T19:45");
-  await expect(page.locator("#range-summary")).toContainText("10/01");
-  await expect(page.locator("#range-summary")).toContainText("10/03");
+  await expect(page.locator("#date-from")).toHaveValue(`${fromMonth}-01T08:15`);
+  await expect(page.locator("#date-to")).toHaveValue(`${toMonth}-03T19:45`);
+  await expect(page.locator("#range-summary")).toContainText(`${fromMonth.slice(5)}/01`);
+  await expect(page.locator("#range-summary")).toContainText(`${toMonth.slice(5)}/03`);
 });
 
-test("chart controls fit a narrow desktop viewport", async ({ page }) => {
-  await page.setViewportSize({ width: 1024, height: 900 });
+for (const width of [1440, 1280, 1094, 1024, 900]) {
+  test(`date fields remain compact and aligned at ${width}px in both languages and themes`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await waitForDashboard(page);
+    for (const lang of ["zh", "en"]) {
+      if ((await page.locator("html").getAttribute("lang")).startsWith("zh") !== (lang === "zh")) await page.locator("#lang-toggle").click();
+      for (const theme of ["dark", "light"]) {
+        if (await page.locator("html").getAttribute("data-theme") !== theme) await page.locator("#theme-toggle").click();
+        const layout = await page.evaluate(() => ({
+          overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+          controlsRight: document.querySelector(".chart-controls").getBoundingClientRect().right,
+          chartRight: document.querySelector(".chart-panel").getBoundingClientRect().right,
+          titleWidth: document.querySelector(".chart-header > div:first-child").getBoundingClientRect().width,
+          fields: [...document.querySelectorAll(".date-input-group")].map((el) => {
+            const trigger = el.querySelector(".date-trigger");
+            const text = document.createRange();
+            text.selectNodeContents(trigger);
+            return {
+              width: el.getBoundingClientRect().width,
+              top: el.getBoundingClientRect().top,
+              blank: el.querySelector(".time-input").getBoundingClientRect().left - text.getBoundingClientRect().right,
+            };
+          }),
+          apply: document.querySelector("#apply-button").getBoundingClientRect().toJSON(),
+          end: document.querySelector("#date-to-time").closest(".date-input-group").getBoundingClientRect().toJSON(),
+          panelRight: document.querySelector(".filter-panel").getBoundingClientRect().right,
+        }));
+        expect(layout.overflow).toBe(false);
+        expect(layout.controlsRight).toBeLessThanOrEqual(layout.chartRight + 1);
+        expect(layout.titleWidth).toBeGreaterThanOrEqual(180);
+        for (const field of layout.fields) {
+          expect(field.width).toBeLessThanOrEqual(160);
+          expect(field.blank).toBeLessThanOrEqual(34);
+        }
+        expect(Math.abs(layout.fields[0].width - layout.fields[1].width)).toBeLessThan(1);
+        expect(Math.abs(layout.fields[0].top - layout.fields[1].top)).toBeLessThan(1);
+        expect(Math.abs(layout.apply.top - layout.end.top)).toBeLessThan(4);
+        expect(layout.apply.left - layout.end.right).toBeLessThanOrEqual(12);
+        expect(layout.apply.right).toBeLessThanOrEqual(layout.panelRight - 8);
+
+        for (const prefix of ["from", "to"]) {
+          const trigger = page.locator(`#date-${prefix}-trigger`);
+          await trigger.click();
+          await expect(trigger).toHaveAttribute("aria-expanded", "true");
+          await expect(page.locator("#date-picker-popover")).toBeVisible();
+          const anchor = await trigger.locator("..").boundingBox();
+          const popover = await page.locator("#date-picker-popover").boundingBox();
+          expect(Math.abs(popover.y - anchor.y - anchor.height - 8)).toBeLessThan(1);
+          expect(popover.x + popover.width).toBeLessThanOrEqual(layout.panelRight - 8);
+          await page.keyboard.press("Escape");
+          await expect(page.locator("#date-picker-popover")).toBeHidden();
+          await expect(trigger).toBeFocused();
+          await expect(trigger).toHaveAttribute("aria-expanded", "false");
+        }
+      }
+    }
+  });
+}
+
+test("clearing a date keeps its field width and an open calendar follows a desktop resize", async ({ page }) => {
   await waitForDashboard(page);
-  const layout = await page.evaluate(() => ({
-    overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
-    controlsRight: document.querySelector(".chart-controls").getBoundingClientRect().right,
-    chartRight: document.querySelector(".chart-panel").getBoundingClientRect().right,
-  }));
-  expect(layout.overflow).toBe(false);
-  expect(layout.controlsRight).toBeLessThanOrEqual(layout.chartRight + 1);
+  const trigger = page.locator("#date-from-trigger");
+  const before = await trigger.locator("..").boundingBox();
+  await trigger.click();
+  await page.locator(".date-picker-footer-button").first().click();
+  await expect(page.locator("#date-from")).toHaveValue("");
+  await expect(trigger).toHaveText("—");
+  const cleared = await trigger.locator("..").boundingBox();
+  expect(cleared.width).toBe(before.width);
+
+  await page.locator("#date-to-trigger").click();
+  await page.setViewportSize({ width: 900, height: 1000 });
+  const anchor = await page.locator("#date-to-trigger").locator("..").boundingBox();
+  await expect.poll(async () => {
+    const popover = await page.locator("#date-picker-popover").boundingBox();
+    return Math.abs(popover.y - anchor.y - anchor.height - 8);
+  }).toBeLessThan(1);
+  await page.locator(".welcome-row h1").click();
+  await expect(page.locator("#date-picker-popover")).toBeHidden();
 });

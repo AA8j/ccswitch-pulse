@@ -64,7 +64,7 @@ npm start -- --db /path/to/cc-switch.db
 
 ## Updating
 
-Current version: `v0.1.4`. The project does not auto-update local installations; updates are explicit so a data-reading change never happens unexpectedly.
+Current version: `v0.1.5`. The project does not auto-update local installations; updates are explicit so a data-reading change never happens unexpectedly.
 
 ### Track the latest main branch
 
@@ -74,10 +74,10 @@ npx --yes --prefer-online "github:aa8j/ccswitch-pulse"
 
 ### Use a stable release
 
-After a release tag is published, pin a specific version with:
+Pin this release to avoid unexpected changes:
 
 ```bash
-npx --yes "github:aa8j/ccswitch-pulse#v0.1.4"
+npx --yes "github:aa8j/ccswitch-pulse#v0.1.5"
 ```
 
 ### Update a local checkout

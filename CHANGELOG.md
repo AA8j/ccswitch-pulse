@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.5 — 2026-10-12
+
+- Removed oversized date-field padding; date and time now use compact, equal-width controls.
+- Kept the complete custom range together on narrower desktops, with the Apply action beside the end date.
+- Anchored calendars to their field, including window resizing, and added expanded-state and Escape focus handling.
+- Prevented chart titles from being squeezed into vertical text at intermediate desktop widths.
+- Added five-width, bilingual, dual-theme layout regression checks and refreshed 2× README screenshots.
+
 ## v0.1.4 — 2026-10-12
 
 - Replaced the native browser date popup with a themed calendar picker and compact time inputs.

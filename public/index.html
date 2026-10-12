@@ -52,7 +52,7 @@
             </div>
             <p>你的用量数据留在本机。<br />看板只读取 CC Switch 数据库。</p>
           </div>
-          <div class="side-version"><span>CCSwitch Pulse</span><span>v0.1.4</span></div>
+          <div class="side-version"><span>CCSwitch Pulse</span><span>v0.1.5</span></div>
         </div>
       </aside>
 
@@ -139,34 +139,37 @@
         </section>
 
         <section class="filter-panel" aria-label="数据筛选">
-          <div class="presets" role="group" aria-label="快捷时间范围">
-            <button class="preset" data-range="1">24 小时</button>
-            <button class="preset active" data-range="7">7 天</button>
-            <button class="preset" data-range="30">30 天</button>
-            <button class="preset" data-range="week">本周</button>
-            <button class="preset" data-range="month">本月</button>
-            <button class="preset" data-range="year">今年</button>
-            <button class="preset" data-range="all">全部</button>
+          <div class="filter-content">
+            <div class="presets" role="group" aria-label="快捷时间范围">
+              <button class="preset" data-range="1">24 小时</button>
+              <button class="preset active" data-range="7">7 天</button>
+              <button class="preset" data-range="30">30 天</button>
+              <button class="preset" data-range="week">本周</button>
+              <button class="preset" data-range="month">本月</button>
+              <button class="preset" data-range="year">今年</button>
+              <button class="preset" data-range="all">全部</button>
+            </div>
+            <div class="date-range">
+              <div class="date-control" role="group" aria-labelledby="date-from-label">
+                <span id="date-from-label">起始</span>
+                <div class="date-input-group">
+                  <input id="date-from" type="hidden" />
+                  <button id="date-from-trigger" class="date-trigger" type="button" aria-label="起始日期" aria-haspopup="dialog" aria-expanded="false" aria-controls="date-picker-popover">—</button>
+                  <input id="date-from-time" class="time-input" type="text" inputmode="numeric" maxlength="5" placeholder="00:00" aria-label="起始时间" />
+                </div>
+              </div>
+              <span class="date-arrow" aria-hidden="true">→</span>
+              <div class="date-control" role="group" aria-labelledby="date-to-label">
+                <span id="date-to-label">结束</span>
+                <div class="date-input-group">
+                  <input id="date-to" type="hidden" />
+                  <button id="date-to-trigger" class="date-trigger" type="button" aria-label="结束日期" aria-haspopup="dialog" aria-expanded="false" aria-controls="date-picker-popover">—</button>
+                  <input id="date-to-time" class="time-input" type="text" inputmode="numeric" maxlength="5" placeholder="00:00" aria-label="结束时间" />
+                </div>
+              </div>
+              <button id="apply-button" class="apply-button">应用</button>
+            </div>
           </div>
-          <span class="filter-separator"></span>
-          <label class="date-control">
-            <span>起始</span>
-            <div class="date-input-group">
-              <input id="date-from" type="hidden" />
-              <button id="date-from-trigger" class="date-trigger" type="button" aria-label="起始日期" aria-haspopup="dialog">—</button>
-              <input id="date-from-time" class="time-input" type="text" inputmode="numeric" maxlength="5" placeholder="00:00" aria-label="起始时间" />
-            </div>
-          </label>
-          <span class="date-arrow" aria-hidden="true">→</span>
-          <label class="date-control">
-            <span>结束</span>
-            <div class="date-input-group">
-              <input id="date-to" type="hidden" />
-              <button id="date-to-trigger" class="date-trigger" type="button" aria-label="结束日期" aria-haspopup="dialog">—</button>
-              <input id="date-to-time" class="time-input" type="text" inputmode="numeric" maxlength="5" placeholder="00:00" aria-label="结束时间" />
-            </div>
-          </label>
-          <button id="apply-button" class="apply-button">应用</button>
           <div id="date-picker-popover" class="date-picker-popover" role="dialog" aria-label="日期选择" hidden></div>
         </section>
 

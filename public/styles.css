@@ -437,18 +437,36 @@ a {
 }
 .filter-panel {
   position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
+  container-type: inline-size;
   background: var(--surface);
   border: 1px solid #253246;
   border-radius: 14px;
   padding: 12px 14px;
   min-height: 62px;
 }
+.filter-content {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  align-items: center;
+  gap: 12px;
+}
+.date-range {
+  display: grid;
+  justify-self: start;
+  grid-template-columns: max-content 12px max-content max-content;
+  align-items: center;
+  gap: 10px;
+  padding-left: 12px;
+  border-left: 1px solid var(--line);
+}
+/* Wrap the range as a unit, never stretch the individual date/time fields. */
+@container (max-width: 920px) {
+  .filter-content { grid-template-columns: max-content; }
+  .date-range { padding-left: 0; border-left: 0; }
+}
 .presets {
   display: flex;
+  justify-self: start;
   gap: 4px;
   background: #0d1521;
   border: 1px solid #27374a;
@@ -474,13 +492,8 @@ a {
   background: var(--teal);
   box-shadow: 0 3px 12px #4fd3c032;
 }
-.filter-separator {
-  height: 27px;
-  width: 1px;
-  background: #314158;
-  margin: 0 3px;
-}
 .date-control {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -494,42 +507,18 @@ a {
 .date-input-group {
   display: flex;
   align-items: center;
-  gap: 4px;
+  flex: none;
+  width: max-content;
   min-width: 0;
   padding: 3px;
   background: #0d1724;
   border: 1px solid #2b3d53;
   border-radius: 9px;
-}
-.date-input-group input[type="date"] {
-  width: 125px;
-}
-.date-input-group input[type="time"] {
-  width: 78px;
-}
-.date-input-group input[type="date"],
-.date-input-group input[type="time"] {
-  min-width: 0;
-  background: transparent;
-  color: #c6d5e6;
-  border: 0;
-  border-radius: 6px;
-  padding: 6px 5px;
-  font-size: 10px;
-  outline: none;
-  color-scheme: dark;
+  font-variant-numeric: tabular-nums;
 }
 .date-input-group:focus-within {
   border-color: var(--teal);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--teal) 16%, transparent);
-}
-.date-input-group input::-webkit-calendar-picker-indicator {
-  filter: invert(0.7);
-  cursor: pointer;
-}
-.date-input-group input[type="date"]::-webkit-datetime-edit,
-.date-input-group input[type="time"]::-webkit-datetime-edit {
-  color: #c6d5e6;
 }
 .date-arrow {
   font-size: 13px;
@@ -538,7 +527,6 @@ a {
 .apply-button {
   height: 32px;
   padding: 0 12px;
-  margin-left: auto;
   font-size: 10px;
   font-weight: 700;
   white-space: nowrap;
@@ -718,6 +706,12 @@ a {
   display: flex;
   gap: 9px;
   align-items: center;
+}
+.chart-header {
+  flex-wrap: wrap;
+}
+.chart-header > div:first-child {
+  flex: 1 0 180px;
 }
 .segmented {
   display: flex;
@@ -1247,18 +1241,6 @@ th:last-child {
   .main-content {
     padding: 0 25px;
   }
-  .filter-panel {
-    flex-wrap: wrap;
-  }
-  .date-input-group input[type="date"] {
-    width: 126px;
-  }
-  .date-input-group input[type="time"] {
-    width: 78px;
-  }
-  .filter-separator {
-    display: none;
-  }
   .range-summary {
     display: none;
   }
@@ -1285,7 +1267,7 @@ th:last-child {
     margin-top: 0;
   }
 }
-@media (max-width: 1060px) {
+@media (max-width: 1180px) {
   .chart-header {
     flex-wrap: wrap;
   }
@@ -1393,19 +1375,6 @@ th:last-child {
   }
   .preset {
     flex: 1;
-  }
-  .date-control {
-    flex: 1;
-  }
-  .date-control span {
-    display: none;
-  }
-  .date-input-group {
-    flex: 1;
-  }
-  .date-input-group input[type="date"] {
-    flex: 1;
-    width: auto;
   }
   .apply-button {
     margin-left: 0;
@@ -1625,9 +1594,6 @@ th:last-child {
   color: #0a696a;
   box-shadow: 0 1px 5px #28546b14;
 }
-:root[data-theme="light"] .filter-separator {
-  background: #d9e5e9;
-}
 :root[data-theme="light"] .date-control span,
 :root[data-theme="light"] .select-wrap span {
   color: #657d8a;
@@ -1639,9 +1605,6 @@ th:last-child {
 :root[data-theme="light"] .date-input-group input {
   color: #294756;
   color-scheme: light;
-}
-:root[data-theme="light"] .date-input-group input::-webkit-datetime-edit {
-  filter: none;
 }
 :root[data-theme="light"] .date-arrow,
 :root[data-theme="light"] .range-summary {
@@ -2384,29 +2347,44 @@ th:last-child {
 }
 
 /* Custom date range picker: stable presentation across browsers instead of the native datetime-local popup. */
-.date-control { position: relative; }
 .date-trigger {
-  min-width: 126px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  min-width: 0;
+  width: calc(10ch + 28px);
   border: 0;
   background: transparent;
   color: #c6d5e6;
   border-radius: 6px;
-  padding: 6px 5px;
-  font-size: 10px;
+  padding: 6px 8px;
+  font-size: 11px;
   text-align: left;
   white-space: nowrap;
   cursor: pointer;
 }
+.date-trigger::after {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  opacity: .65;
+}
 .date-trigger:hover,
 .date-trigger:focus-visible { color: var(--teal); outline: none; background: color-mix(in srgb, var(--teal) 8%, transparent); }
 .time-input {
-  width: 66px;
+  flex: none;
+  width: calc(5ch + 17px);
+  min-width: 0;
   border: 0;
   border-left: 1px solid #2b3d53;
   background: transparent;
   color: #c6d5e6;
-  padding: 6px 5px 6px 8px;
-  font-size: 10px;
+  padding: 6px 8px;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
   outline: none;
 }
@@ -2442,6 +2420,7 @@ th:last-child {
   cursor: pointer;
 }
 .date-picker-nav { font-size: 20px; line-height: 1; }
+.date-picker-footer-button { min-height: 30px; font-size: 12px; font-weight: 650; }
 .date-picker-nav:hover,
 .date-picker-footer-button:hover { background: color-mix(in srgb, var(--blue) 14%, transparent); }
 .date-picker-week,
@@ -2469,3 +2448,5 @@ th:last-child {
 :root[data-theme="light"] .time-input { border-left-color: #d3e2e6; }
 :root[data-theme="light"] .date-picker-popover { background: #ffffff; border-color: #c9dfe3; box-shadow: 0 20px 55px #45636b2b; }
 :root[data-theme="light"] .date-picker-day { color: #355d69; }
+:root[data-theme="light"] .date-picker-day.selected { color: #ffffff; }
+:root[data-theme="light"] .date-picker-day.today:not(.selected) { color: var(--teal); }
