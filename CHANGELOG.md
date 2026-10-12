@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.6 — 2026-10-12
+
+- Fixed the 1280px cross-platform date-range overflow by wrapping the entire range according to actual content width, not an assumed font-dependent breakpoint.
+- Kept all compact-field, padding, alignment and overflow acceptance checks; added wider-font regression coverage.
+- Corrected share-card repository-icon spacing and missing model counts.
+- Rebuilt bilingual, light/dark README images with complete charts and content-addressed filenames.
+- Added reproducible screenshot tooling, version/hash validation and CI failure artifacts.
+
 ## v0.1.5 — 2026-10-12
 
 - Removed oversized date-field padding; date and time now use compact, equal-width controls.

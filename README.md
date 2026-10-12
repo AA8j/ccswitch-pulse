@@ -13,7 +13,7 @@
   <a href="#数据与隐私">数据与隐私</a>
 </p>
 
-![CCSwitch Pulse 深色主题](docs/images/dashboard-dark-zh.png)
+![CCSwitch Pulse 深色主题](docs/images/dashboard-dark-zh-e1489b415cd7.png)
 
 > 截图使用固定锚点的合成数据，不包含个人调用记录；模型名称和分布形状参考本地聚合数据的结构，不复制真实记录。CCSwitch Pulse 面向桌面浏览器，支持中英文、浅色和深色主题。
 
@@ -64,7 +64,7 @@ npm start -- --db /path/to/cc-switch.db
 
 ## 更新
 
-当前版本：`v0.1.5`。项目不会自动更新本地程序，避免在没有确认的情况下改变数据读取逻辑；更新由你显式选择版本。
+当前版本：`v0.1.6`。更新前先在旧程序终端按 `Ctrl+C` 停止；仅刷新网页不会替换正在运行的程序。项目不会自动更新本地程序，避免在没有确认的情况下改变数据读取逻辑；更新由你显式选择版本。
 
 ### 使用最新主线
 
@@ -77,7 +77,7 @@ npx --yes --prefer-online "github:aa8j/ccswitch-pulse"
 固定到本次发布的版本：
 
 ```bash
-npx --yes "github:aa8j/ccswitch-pulse#v0.1.5"
+npx --yes "github:aa8j/ccswitch-pulse#v0.1.6"
 ```
 
 ### 更新本地源码
@@ -110,16 +110,23 @@ npm start
 <details>
 <summary><strong>浅色主题与周期报告</strong></summary>
 
-![CCSwitch Pulse 浅色主题](docs/images/dashboard-light-zh.png)
+![CCSwitch Pulse 浅色主题](docs/images/dashboard-light-zh-91a3f8eeda71.png)
 
-![CCSwitch Pulse 周期报告](docs/images/report-light-zh.png)
+![CCSwitch Pulse 周期报告](docs/images/report-light-zh-34e105b70e3c.png)
 
 </details>
 
 <details>
 <summary><strong>分享卡示例</strong></summary>
 
-![CCSwitch Pulse 分享卡](docs/images/share-light-zh.png)
+![CCSwitch Pulse 分享卡](docs/images/share-light-zh-e3dd914bd345.png)
+
+</details>
+
+<details>
+<summary><strong>紧凑日期筛选与日历</strong></summary>
+
+![CCSwitch Pulse 日期筛选](docs/images/date-range-dark-zh-a4a2a9c2fd78.png)
 
 </details>
 
@@ -151,6 +158,7 @@ npm start
 npm ci
 npm test
 npm run check:syntax
+npm run check:readme-images
 npm run smoke:cli
 npm run test:e2e
 npm run benchmark -- 100000

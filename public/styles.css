@@ -424,6 +424,8 @@ a {
 }
 .primary-button {
   background: var(--teal);
+  flex-shrink: 0;
+  white-space: nowrap;
   border-color: var(--teal);
   color: #092527;
   font-size: 11px;
@@ -445,28 +447,23 @@ a {
   min-height: 62px;
 }
 .filter-content {
-  display: grid;
-  grid-template-columns: max-content max-content;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
 }
 .date-range {
   display: grid;
-  justify-self: start;
+  flex: none;
   grid-template-columns: max-content 12px max-content max-content;
   align-items: center;
   gap: 10px;
-  padding-left: 12px;
-  border-left: 1px solid var(--line);
 }
-/* Wrap the range as a unit, never stretch the individual date/time fields. */
-@container (max-width: 920px) {
-  .filter-content { grid-template-columns: max-content; }
-  .date-range { padding-left: 0; border-left: 0; }
-}
+/* Wrap by actual content width, including platform fonts and scrollbar widths.
+   Keep the range as one unit; never stretch the individual date/time fields. */
 .presets {
   display: flex;
-  justify-self: start;
+  flex: none;
   gap: 4px;
   background: #0d1521;
   border: 1px solid #27374a;

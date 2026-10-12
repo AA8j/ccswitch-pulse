@@ -13,7 +13,7 @@
   <a href="#data-and-privacy">Data and privacy</a>
 </p>
 
-![CCSwitch Pulse dark theme](docs/images/dashboard-dark-en.png)
+![CCSwitch Pulse dark theme](docs/images/dashboard-dark-en-eeef116b9d75.png)
 
 > Screenshots use fixed-anchor synthetic data and contain no personal usage records. Model names and distribution shapes follow the structure of aggregated local usage, not copied records. CCSwitch Pulse targets desktop browsers and supports Chinese, English, light, and dark themes.
 
@@ -64,7 +64,7 @@ npm start -- --db /path/to/cc-switch.db
 
 ## Updating
 
-Current version: `v0.1.5`. The project does not auto-update local installations; updates are explicit so a data-reading change never happens unexpectedly.
+Current version: `v0.1.6`. Stop the previous process with `Ctrl+C` before updating; refreshing the browser does not replace the running app. The project does not auto-update local installations; updates are explicit so a data-reading change never happens unexpectedly.
 
 ### Track the latest main branch
 
@@ -77,7 +77,7 @@ npx --yes --prefer-online "github:aa8j/ccswitch-pulse"
 Pin this release to avoid unexpected changes:
 
 ```bash
-npx --yes "github:aa8j/ccswitch-pulse#v0.1.5"
+npx --yes "github:aa8j/ccswitch-pulse#v0.1.6"
 ```
 
 ### Update a local checkout
@@ -110,16 +110,23 @@ The period report includes the leading model, active days, peak usage, daily ave
 <details>
 <summary><strong>Light theme and period report</strong></summary>
 
-![CCSwitch Pulse light theme](docs/images/dashboard-light-en.png)
+![CCSwitch Pulse light theme](docs/images/dashboard-light-en-ffddb292cefd.png)
 
-![CCSwitch Pulse period report](docs/images/report-light-en.png)
+![CCSwitch Pulse period report](docs/images/report-light-en-80239863d4e9.png)
 
 </details>
 
 <details>
 <summary><strong>Share card example</strong></summary>
 
-![CCSwitch Pulse share card](docs/images/share-light-en.png)
+![CCSwitch Pulse share card](docs/images/share-light-en-34140f171fcc.png)
+
+</details>
+
+<details>
+<summary><strong>Compact date range and calendar</strong></summary>
+
+![CCSwitch Pulse date range](docs/images/date-range-dark-en-bc36d4dc1b2d.png)
 
 </details>
 
@@ -151,6 +158,7 @@ See [schema support](docs/SCHEMA_SUPPORT.md) for required fields, optional field
 npm ci
 npm test
 npm run check:syntax
+npm run check:readme-images
 npm run smoke:cli
 npm run test:e2e
 npm run benchmark -- 100000

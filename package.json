@@ -1,6 +1,6 @@
 {
   "name": "ccswitch-pulse",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "A local, read-only model usage dashboard for CC Switch",
   "type": "module",
   "bin": {
@@ -17,7 +17,10 @@
     "test:coverage": "node --test --experimental-test-coverage",
     "smoke:cli": "node ./scripts/smoke-cli.mjs",
     "benchmark": "node ./scripts/benchmark.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "images:prepare": "node ./scripts/readme-images.mjs prepare",
+    "images:publish": "node ./scripts/readme-images.mjs publish",
+    "check:readme-images": "node ./scripts/readme-images.mjs check"
   },
   "dependencies": {
     "echarts": "^6.1.0"

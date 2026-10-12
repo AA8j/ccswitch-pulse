@@ -76,7 +76,7 @@ test("custom date controls are editable and apply a local range", async ({ page 
   await expect(page.locator("#range-summary")).toContainText(`${toMonth.slice(5)}/03`);
 });
 
-for (const width of [1440, 1280, 1094, 1024, 900]) {
+for (const width of [1920, 1600, 1440, 1320, 1280, 1240, 1180, 1094, 1024, 900]) {
   test(`date fields remain compact and aligned at ${width}px in both languages and themes`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 });
     await waitForDashboard(page);
@@ -155,4 +155,67 @@ test("clearing a date keeps its field width and an open calendar follows a deskt
   }).toBeLessThan(1);
   await page.locator(".welcome-row h1").click();
   await expect(page.locator("#date-picker-popover")).toBeHidden();
+});
+
+test("1280px range controls adapt to wider platform fallback fonts", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await waitForDashboard(page);
+  if ((await page.locator("html").getAttribute("lang")).startsWith("zh")) await page.locator("#lang-toggle").click();
+  // Model the extra text width from CI fallback fonts, without weakening the
+  // existing panel padding or overflow assertions.
+  await page.addStyleTag({ content: ".presets { letter-spacing: .75px; }" });
+  for (const font of ["Arial, sans-serif", "monospace"]) {
+    await page.evaluate((font) => document.documentElement.style.fontFamily = font, font);
+    const layout = await page.evaluate(() => ({
+      overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      panelRight: document.querySelector(".filter-panel").getBoundingClientRect().right,
+      applyRight: document.querySelector("#apply-button").getBoundingClientRect().right,
+      fromTop: document.querySelector("#date-from-trigger").getBoundingClientRect().top,
+      toTop: document.querySelector("#date-to-trigger").getBoundingClientRect().top,
+    }));
+    expect(layout.overflow, font).toBe(false);
+    expect(layout.applyRight, font).toBeLessThanOrEqual(layout.panelRight - 8);
+    expect(layout.fromTop, font).toBe(layout.toTop);
+  }
+});
+
+test("share exports include model counts and keep the repository icon clear of its name", async ({ page }) => {
+  await waitForDashboard(page);
+  await page.evaluate(() => {
+    window.shareMarks = { texts: [], icons: [] };
+    const prototype = CanvasRenderingContext2D.prototype;
+    const fillText = prototype.fillText, fill = prototype.fill;
+    prototype.fillText = function(text, x, y, ...rest) {
+      if (this.canvas.width === 2400 && this.canvas.height === 1350) {
+        const transform = this.getTransform();
+        window.shareMarks.texts.push({ text: String(text), left: (x - (this.textAlign === "right" ? this.measureText(text).width : 0)) * transform.a + transform.e });
+      }
+      return fillText.call(this, text, x, y, ...rest);
+    };
+    prototype.fill = function(...args) {
+      if (this.canvas.width === 2400 && this.canvas.height === 1350 && args[0] instanceof Path2D) {
+        const transform = this.getTransform();
+        window.shareMarks.icons.push({ right: transform.e + 16 * transform.a });
+      }
+      return fill.apply(this, args);
+    };
+  });
+  for (const lang of ["zh", "en"]) {
+    if ((await page.locator("html").getAttribute("lang")).startsWith("zh") !== (lang === "zh")) await page.locator("#lang-toggle").click();
+    for (const theme of ["dark", "light"]) {
+      if (await page.locator("html").getAttribute("data-theme") !== theme) await page.locator("#theme-toggle").click();
+      const count = await page.locator("#kpi-models").textContent();
+      await page.locator("#share-button").click();
+      for (const template of ["story", "mix", "rhythm", "tokens"]) {
+        await page.evaluate(() => window.shareMarks = { texts: [], icons: [] });
+        await page.locator(`[data-share-template="${template}"]`).click();
+        const marks = await page.evaluate(() => window.shareMarks);
+        const name = marks.texts.find((mark) => mark.text === "ccswitch-pulse");
+        expect(name.left - marks.icons[0].right).toBeGreaterThanOrEqual(19);
+        if (template === "mix") expect(marks.texts.some((mark) => mark.text === `${count} ${lang === "zh" ? "个模型" : "models"}`)).toBe(true);
+        await expect.poll(() => page.locator("#share-preview").evaluate((image) => [image.naturalWidth, image.naturalHeight])).toEqual([2400, 1350]);
+      }
+      await page.locator("#share-close").click();
+    }
+  }
 });

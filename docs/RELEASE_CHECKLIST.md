@@ -85,7 +85,8 @@ npx -y "github:aa8j/ccswitch-pulse" --demo --no-open
 
 ## Gate 6：发布资料
 
-- [ ] README 中英文内容、命令、截图与当前版本一致。
+- [ ] README 中英文内容、命令、截图与当前版本一致；`npm run check:readme-images` 通过。
+- [ ] 同一提交的 macOS、Linux、Windows CI 全部成功后再打稳定版本标签。
 - [ ] README 不包含临时占位说明或维护者本机路径。
 - [ ] package metadata 已填写真实仓库信息。
 - [ ] 版本号、变更记录和 license 一致。

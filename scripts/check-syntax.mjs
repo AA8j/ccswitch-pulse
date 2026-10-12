@@ -9,7 +9,7 @@ async function collect(root) {
   for (const entry of await readdir(root, { withFileTypes: true })) {
     const path = join(root, entry.name);
     if (entry.isDirectory()) await collect(path);
-    else if (path.endsWith(".js")) files.push(path);
+    else if (/\.(?:js|mjs|cjs)$/.test(path)) files.push(path);
   }
 }
 
