@@ -4,10 +4,6 @@ const $$ = (selector) => [...document.querySelectorAll(selector)];
 const t = (key, values) => window.pulseI18n.t(key, values);
 const language = () => window.pulseI18n.get();
 const SHARE_REPOSITORY = "ccswitch-pulse";
-const SHARE_COLORS = {
-  dark: ["#73d6c9", "#86a8e6", "#aa93d9", "#dbb66f", "#d88b9d", "#86bb9e"],
-  light: ["#2f918b", "#4c74c4", "#795fae", "#a87725", "#b25d76", "#4f8b6e"],
-};
 const MODEL_COLOR_OVERRIDES = {
   "deepseek-flash": 0,
   "gpt-6-astra": 1,
@@ -331,10 +327,9 @@ function colorFor(model) {
   }
   return COLORS[window.pulseTheme.get()][state.colors.get(model)];
 }
-function shareColorFor(model, fallbackIndex = 0) {
+function shareColorFor(model) {
   if (model === "__other__") return window.pulseTheme.get() === "light" ? "#93a6ad" : "#879aa8";
-  const index = state.colors.get(model) ?? fallbackIndex;
-  return SHARE_COLORS[window.pulseTheme.get()][index % SHARE_COLORS.dark.length];
+  return colorFor(model);
 }
 
 function chartTheme() {
@@ -1727,313 +1722,227 @@ let shareCanvas;
 function drawSmoothPath(ctx, points) {
   if (!points.length) return;
   ctx.moveTo(points[0].x, points[0].y);
-  for (let index = 0; index < points.length - 1; index++) {
-    const p0 = points[index - 1] || points[index];
-    const p1 = points[index];
-    const p2 = points[index + 1];
-    const p3 = points[index + 2] || p2;
-    const cp1 = { x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6 };
-    const cp2 = { x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6 };
-    ctx.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, p2.x, p2.y);
+  const slopes = points.slice(1).map((point, i) => (point.y - points[i].y) / (point.x - points[i].x));
+  const tangents = points.map((_, i) => {
+    if (!i) return slopes[0] || 0;
+    if (i === points.length - 1) return slopes.at(-1) || 0;
+    const a = slopes[i - 1], b = slopes[i];
+    return a * b <= 0 ? 0 : 2 * a * b / (a + b);
+  });
+  // Monotone interpolation keeps a smooth curve inside the real data extrema.
+  for (let i = 0; i < points.length - 1; i++) {
+    const a = points[i], b = points[i + 1], dx = (b.x - a.x) / 3;
+    const limit = Math.abs(slopes[i]) * 3;
+    const m1 = Math.sign(tangents[i]) * Math.min(Math.abs(tangents[i]), limit);
+    const m2 = Math.sign(tangents[i + 1]) * Math.min(Math.abs(tangents[i + 1]), limit);
+    ctx.bezierCurveTo(a.x + dx, a.y + m1 * dx, b.x - dx, b.y - m2 * dx, b.x, b.y);
   }
 }
+
+function shareTimeline(metric = "calls") {
+  const { from, to } = state.series.range;
+  const span = to - from;
+  const hourly = span <= 2 * 86400 && state.series.range.bucket < 86400;
+  let bins, caption;
+  if (hourly) {
+    const first = bucketStart(from, state.series.range);
+    const step = state.series.range.bucket * Math.max(1, Math.ceil((to - first) / state.series.range.bucket / 24));
+    bins = Array.from({ length: Math.ceil((to - first) / step) }, (_, i) => ({
+      from: Math.max(from, first + i * step), to: Math.min(to, first + (i + 1) * step), value: 0, models: new Map(),
+    }));
+    for (const row of state.series.rows) {
+      const index = Math.min(bins.length - 1, Math.max(0, Math.floor((row.bucket - first) / step)));
+      bins[index].value += Number(row[metric] || 0);
+      bins[index].models.set(row.model, (bins[index].models.get(row.model) || 0) + Number(row[metric] || 0));
+    }
+    caption = step >= 3600 ? t("shareGroupHours", { hours: number(step / 3600) }) : t("shareGroupMinutes", { minutes: number(step / 60) });
+  } else {
+    const first = startOfLocalDay(from);
+    const count = localDayNumber(to - 1) - localDayNumber(first) + 1;
+    const step = count <= 31 ? 1 : Math.ceil(count / 24);
+    const dayAt = (index) => { const date = new Date(first * 1000); date.setDate(date.getDate() + index); return Math.floor(date.getTime() / 1000); };
+    bins = Array.from({ length: Math.ceil(count / step) }, (_, i) => ({
+      from: Math.max(from, dayAt(i * step)), to: Math.min(to, dayAt((i + 1) * step)), value: 0, models: new Map(),
+    }));
+    // Reports always contain daily totals, even when the main chart is weekly.
+    // Fill quiet days and cover the whole range; never silently keep only the last 20 days.
+    for (const row of state.report.current.modelDays) {
+      const index = Math.min(bins.length - 1, Math.max(0, Math.floor((localDayNumber(row.time) - localDayNumber(first)) / step)));
+      bins[index].value += Number(row[metric] || 0);
+      bins[index].models.set(row.model, (bins[index].models.get(row.model) || 0) + Number(row[metric] || 0));
+    }
+    caption = step === 1 ? t("shareDailyTotals") : t("shareGroupDays", { days: number(step) });
+  }
+  const crossYear = new Date(from * 1000).getFullYear() !== new Date(to * 1000).getFullYear();
+  const tickLabel = (time) => {
+    const date = new Date(time * 1000), pad = (n) => String(n).padStart(2, "0");
+    const day = `${crossYear ? `${date.getFullYear()}/` : ""}${pad(date.getMonth() + 1)}/${pad(date.getDate())}`;
+    return hourly ? `${day} ${pad(date.getHours())}:${pad(date.getMinutes())}` : day;
+  };
+  return { bins, caption, hourly, tickLabel };
+}
+
+function shareSegments(metric = "calls") {
+  const total = Number(state.report.current[metric] || 0);
+  const models = [...state.report.current.models].sort((a, b) => Number(b[metric] || 0) - Number(a[metric] || 0) || a.model.localeCompare(b.model));
+  const entries = models.slice(0, 5).map((entry) => ({
+    model: entry.model, value: Number(entry[metric] || 0), share: total ? Number(entry[metric] || 0) / total : 0,
+    color: shareColorFor(entry.model), other: false,
+  }));
+  if (models.length > 5) {
+    const value = models.slice(5).reduce((sum, entry) => sum + Number(entry[metric] || 0), 0);
+    entries.push({ model: t("shareOther"), value, share: total ? value / total : 0, color: shareColorFor("__other__"), other: true });
+  }
+  for (const entry of entries) entry.percent = Math.floor(entry.share * 100);
+  const remaining = total ? 100 - entries.reduce((sum, entry) => sum + entry.percent, 0) : 0;
+  const fractions = [...entries].sort((a, b) => (b.share * 100 - b.percent) - (a.share * 100 - a.percent));
+  for (let i = 0; i < remaining; i++) fractions[i % fractions.length].percent++;
+  const usedColors = new Set();
+  for (const entry of entries) {
+    if (usedColors.has(entry.color)) entry.color = COLORS[window.pulseTheme.get()].find((color) => !usedColors.has(color));
+    usedColors.add(entry.color);
+  }
+  return entries;
+}
+
 function drawShareCard() {
-  const report = state.report;
-  if (!report?.current.calls) return null;
+  if (!state.report?.current.calls) return null;
   const canvas = document.createElement("canvas");
-  canvas.width = 2400;
-  canvas.height = 1350;
-  const ctx = canvas.getContext("2d");
-  ctx.scale(2, 2);
+  canvas.width = 2400; canvas.height = 1350;
+  const ctx = canvas.getContext("2d"); ctx.scale(2, 2);
   const light = window.pulseTheme.get() === "light";
-  const bg = light ? "#eef5f5" : "#0c1420";
-  const surface = light ? "#ffffff" : "#132233";
-  const textColor = light ? "#18303e" : "#eef7f7";
-  const muted = light ? "#627987" : "#91a9ba";
-  const accent = light ? "#087d78" : "#68e2d2";
-  const stroke = light ? "#d8e7e8" : "#2b4051";
-  const current = report.current;
-  const showTokens = $("#share-show-tokens").checked;
-  const template = $("#share-template").value || "story";
-  const mix = template === "mix";
-  const rhythm = template === "rhythm";
-  const tokensCard = template === "tokens";
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, 1200, 675);
-  const glow = ctx.createRadialGradient(1070, 50, 30, 1070, 50, 550);
-  glow.addColorStop(0, light ? "#d8efea" : "#183d45");
-  glow.addColorStop(1, bg);
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, 1200, 675);
-  ctx.fillStyle = surface;
-  ctx.beginPath();
-  ctx.roundRect(42, 40, 1116, 595, 28);
-  ctx.fill();
-  ctx.strokeStyle = stroke;
-  ctx.stroke();
-  ctx.fillStyle = accent;
-  for (const [x, y, alpha] of [[82, 80, 1], [98, 80, 0.6], [82, 96, 0.6], [98, 96, 0.3]]) {
-    ctx.globalAlpha = alpha;
-    ctx.beginPath();
-    ctx.roundRect(x, y, 11, 11, 3);
-    ctx.fill();
+  const colors = {
+    bg: light ? "#eaf2f1" : "#09131e", surface: light ? "#ffffff" : "#122131",
+    panel: light ? "#f6faf9" : "#172c3b", text: light ? "#183542" : "#edf7f7",
+    muted: light ? "#627b87" : "#9bb1be", line: light ? "#dbe8e7" : "#294252",
+    accent: light ? "#087d78" : "#68e2d2",
+  };
+  const text = (value, x, y, size = 12, color = colors.text, weight = 600, align = "left", maxWidth) => {
+    ctx.font = `${weight} ${size}px Inter, PingFang SC, system-ui, sans-serif`;
+    ctx.fillStyle = color; ctx.textAlign = align;
+    let label = String(value);
+    if (maxWidth && ctx.measureText(label).width > maxWidth) {
+      while (label.length && ctx.measureText(`${label}…`).width > maxWidth) label = label.slice(0, -1);
+      label += "…";
+    }
+    ctx.fillText(label, x, y); ctx.textAlign = "left";
+  };
+  const box = (x, y, width, height, radius = 16, color = colors.panel) => {
+    ctx.beginPath(); ctx.roundRect(x, y, width, height, radius); ctx.fillStyle = color; ctx.fill();
+    ctx.strokeStyle = colors.line; ctx.lineWidth = 1; ctx.stroke();
+  };
+  const rule = (x1, y1, x2, y2, color = colors.line) => {
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.stroke();
+  };
+  const current = state.report.current, template = $("#share-template").value || "calls";
+  const tokens = template === "tokens";
+  const showTokens = $("#share-show-tokens").checked, tokenMetric = tokens && showTokens;
+  const metric = tokenMetric ? "tokens" : "calls";
+  const segments = shareSegments(metric);
+  ctx.fillStyle = colors.bg; ctx.fillRect(0, 0, 1200, 675);
+  box(32, 24, 1136, 627, 25, colors.surface);
+  for (const [x, y, alpha] of [[64, 58, 1], [80, 58, .65], [64, 74, .65], [80, 74, .3]]) {
+    ctx.globalAlpha = alpha; ctx.fillStyle = colors.accent;
+    ctx.beginPath(); ctx.roundRect(x, y, 11, 11, 3); ctx.fill();
   }
   ctx.globalAlpha = 1;
-  ctx.font = "700 23px Inter, system-ui, sans-serif";
-  ctx.fillStyle = textColor;
-  ctx.fillText("CCSwitch Pulse", 128, 99);
-  ctx.textAlign = "right";
-  ctx.font = "500 15px Inter, system-ui, sans-serif";
-  ctx.fillStyle = muted;
-  ctx.fillText(`${dateText(state.range.from, false)} — ${dateText(state.range.to, false)}`, 1115, 95);
-  ctx.textAlign = "left";
-  ctx.fillStyle = accent;
-  ctx.font = "700 14px Inter, system-ui, sans-serif";
-  ctx.fillText(mix ? t("shareMixEyebrow") : rhythm ? t("shareRhythmEyebrow") : tokensCard ? t("shareTokensEyebrow") : t("shareStoryEyebrow"), 82, 171);
-  ctx.fillStyle = textColor;
-  ctx.font = "700 42px Inter, PingFang SC, system-ui, sans-serif";
-  ctx.fillText(mix ? t("shareMixTitle") : rhythm ? t("shareRhythmTitle") : tokensCard ? t("shareTokensTitle") : t("shareStoryTitle"), 82, 221);
-  ctx.font = "700 76px Inter, system-ui, sans-serif";
-  const headlineValue = tokensCard && showTokens ? compact(current.tokens) : number(current.calls);
-  ctx.fillText(headlineValue, 80, 310);
-  const metricPill = tokensCard && showTokens ? t("shareTokens") : t("shareCalls");
-  ctx.font = "600 14px Inter, PingFang SC, system-ui, sans-serif";
-  const pillWidth = Math.max(108, ctx.measureText(metricPill).width + 28);
-  ctx.fillStyle = light ? "#e7f2f1" : "#203846";
-  ctx.beginPath(); ctx.roundRect(82, 334, pillWidth, 28, 14); ctx.fill();
-  ctx.fillStyle = muted;
-  ctx.fillText(metricPill, 96, 353);
-  let metaY = 402;
-  if (showTokens && !tokensCard) {
-    ctx.font = "700 24px Inter, system-ui, sans-serif";
-    ctx.fillStyle = textColor;
-    ctx.fillText(compact(current.tokens), 84, metaY);
-    ctx.font = "600 11px Inter, PingFang SC, system-ui, sans-serif";
-    ctx.fillStyle = muted;
-    ctx.fillText(t("shareTokens"), 84, metaY + 21);
-    metaY += 56;
+  text("CCSwitch Pulse", 112, 80, 22, colors.text, 750);
+  const short = state.range.to - state.range.from <= 2 * 86400;
+  const headerDate = (time) => new Intl.DateTimeFormat(language() === "zh" ? "zh-CN" : "en-US", {
+    year: "numeric", month: "2-digit", day: "2-digit", hour12: false,
+    ...(short ? { hour: "2-digit", minute: "2-digit" } : {}),
+  }).format(new Date(time * 1000));
+  text(`${headerDate(state.range.from)} — ${headerDate(state.range.to)}`, 1134, 69, 13, colors.text, 600, "right", 750);
+  text(t("shareTimeZone", { zone: Intl.DateTimeFormat().resolvedOptions().timeZone }), 1134, 91, 10, colors.muted, 500, "right", 700);
+  rule(64, 114, 1136, 114);
+  const eyebrow = tokenMetric ? "shareTokensEyebrow" : "shareCallsEyebrow";
+  const title = tokenMetric ? "shareTokenReportTitle" : "shareCallReportTitle";
+  text(t(eyebrow), 64, 150, 11, colors.accent, 750);
+  text(t(title), 64, 183, 30, colors.text, 750, "left", 466);
+  const headline = tokenMetric ? compact(current.tokens) : number(current.calls);
+  let headlineSize = 64;
+  ctx.font = `750 ${headlineSize}px Inter, system-ui, sans-serif`;
+  while (ctx.measureText(headline).width > 464 && headlineSize > 28) ctx.font = `750 ${--headlineSize}px Inter, system-ui, sans-serif`;
+  text(headline, 62, 244, headlineSize, colors.text, 750);
+  text(tokenMetric ? t("shareTokens") : t("shareCalls"), 66, 273, 12, colors.muted, 600);
+  const tile = (x, label, value, detail) => {
+    box(x, 142, 280, 132);
+    text(label, x + 22, 169, 11, colors.muted, 600, "left", 236);
+    text(value, x + 22, 220, 32, colors.text, 750, "left", 236);
+    text(detail, x + 22, 254, 11, colors.muted, 500, "left", 236);
+  };
+  if (tokenMetric) tile(552, t("shareCalls"), number(current.calls), t("shareAverageToken", { value: compact(Math.round(current.tokens / current.calls)) }));
+  else tile(552, showTokens ? t("shareTokens") : t("shareDailyCalls"), showTokens ? compact(current.tokens) : number(current.averageDaily), showTokens ? t("shareTokenTotalNote") : t("shareCalendarAverage"));
+  tile(848, t("shareActiveDays"), number(current.activeDays), `${number(current.models.length)} ${t("shareModels")}`);
+  const privateFacts = [];
+  if ($("#share-show-latest").checked) privateFacts.push(`${t("shareLatestActivity")} ${state.requests?.[0]?.time ? dateText(state.requests[0].time) : t("shareLatestUnknown")}`);
+  if ($("#share-show-cost").checked) privateFacts.push(`${t("shareEstimatedCost")} ${money(current.cost)}`);
+  if (!showTokens) privateFacts.push(t("shareTokensHidden"));
+  text(privateFacts.join("   ·   "), 64, 294, 10, colors.muted, 500, "left", 1072);
+  text(t(tokenMetric ? "shareTokenComposition" : "shareCallComposition"), 64, 310, 12, colors.text, 700);
+  text(`${number(current.models.length)} ${t("shareModels")} · ${t(current.models.length > 5 ? "shareTopModelsNote" : "shareAllModelsNote")}`, 1134, 310, 10, colors.muted, 500, "right", 720);
+  ctx.fillStyle = colors.line; ctx.beginPath(); ctx.roundRect(64, 320, 1072, 14, 7); ctx.fill();
+  ctx.save(); ctx.beginPath(); ctx.roundRect(64, 320, 1072, 14, 7); ctx.clip();
+  let compositionX = 64;
+  for (const entry of segments) {
+    ctx.fillStyle = entry.color; ctx.fillRect(compositionX, 320, entry.share * 1072, 14);
+    compositionX += entry.share * 1072;
   }
-  const latestTime = state.requests?.[0]?.time;
-  if ($("#share-show-latest").checked) {
-    ctx.font = "600 12px Inter, PingFang SC, system-ui, sans-serif";
-    ctx.fillStyle = muted;
-    ctx.fillText(`${t("shareLatestActivity")}  ${latestTime ? dateText(latestTime, true) : t("shareLatestUnknown")}`, 84, metaY);
-    metaY += 23;
-  }
-  if (tokensCard) {
-    const average = current.calls ? Math.round(current.tokens / current.calls) : 0;
-    ctx.font = "600 12px Inter, PingFang SC, system-ui, sans-serif";
-    ctx.fillStyle = muted;
-    ctx.fillText(showTokens ? t("shareAverageToken", { value: compact(average) }) : t("shareTokensHidden"), 84, metaY);
-    metaY += 23;
-  }
-  if ($("#share-show-cost").checked) {
-    ctx.font = "600 14px Inter, PingFang SC, system-ui, sans-serif";
-    ctx.fillStyle = muted;
-    ctx.fillText(`${t("shareEstimatedCost")}  ${money(current.cost)}`, 84, metaY);
-  }
-  if (mix) {
-    const panelX = 560, panelY = 258, panelW = 538, panelH = 236;
-    ctx.fillStyle = light ? "#f2f8f8" : "#172b3b";
-    ctx.beginPath(); ctx.roundRect(panelX, panelY, panelW, panelH, 18); ctx.fill();
-    ctx.strokeStyle = light ? "#d7e7e7" : "#2a4354";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.fillStyle = accent;
-    ctx.font = "700 13px Inter, PingFang SC, system-ui, sans-serif";
-    ctx.fillText(t("shareMixEyebrow"), panelX + 28, panelY + 34);
-    ctx.textAlign = "right";
-    ctx.fillStyle = muted;
-    ctx.font = "600 11px Inter, PingFang SC, system-ui, sans-serif";
-    ctx.fillText(t("shareByCalls"), panelX + panelW - 28, panelY + 34);
-    ctx.textAlign = "left";
-    const segments = current.models.slice(0, 5).map((model, index) => ({
-      ...model,
-      color: shareColorFor(model.model, index),
-      label: model.model.slice(0, 18),
-    }));
-    if (current.models.length > 5)
-      segments.push({
-        model: "__other__",
-        label: t("shareOther"),
-        share: current.models.slice(5).reduce((total, model) => total + model.share, 0),
-        color: shareColorFor("__other__"),
-      });
-    const barX = panelX + 28, barY = panelY + 65, barW = panelW - 56, barH = 26;
-    ctx.save();
-    ctx.beginPath(); ctx.roundRect(barX, barY, barW, barH, 13); ctx.clip();
-    let cursor = barX;
-    for (const segment of segments) {
-      const width = barW * segment.share;
-      ctx.fillStyle = segment.color;
-      ctx.fillRect(cursor, barY, Math.max(2, width), barH);
-      cursor += width;
-    }
-    ctx.restore();
-    ctx.fillStyle = muted;
-    ctx.font = "500 10px Inter, PingFang SC, system-ui, sans-serif";
-    ctx.fillText(`${number(current.models.length)} ${t("shareModels")}`, barX, barY + 45);
-    const colWidth = (barW - 20) / 2;
-    segments.forEach((segment, index) => {
-      const col = index % 2;
-      const row = Math.floor(index / 2);
-      const x = barX + col * (colWidth + 20);
-      const y = barY + 66 + row * 26;
-      ctx.fillStyle = segment.color;
-      ctx.beginPath(); ctx.arc(x + 5, y - 4, 5, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = textColor;
-      ctx.font = "600 12px Inter, PingFang SC, system-ui, sans-serif";
-      ctx.fillText(segment.label, x + 18, y);
-      ctx.textAlign = "right";
-      ctx.fillStyle = muted;
-      ctx.font = "600 12px Inter, PingFang SC, system-ui, sans-serif";
-      ctx.fillText(`${Math.round(segment.share * 100)}%`, x + colWidth, y);
-      ctx.textAlign = "left";
-    });
-  } else if (rhythm || tokensCard) {
-    const panelX = 560, panelY = 258, panelW = 538, panelH = 236;
-    ctx.fillStyle = light ? "#f2f8f8" : "#172b3b";
-    ctx.beginPath(); ctx.roundRect(panelX, panelY, panelW, panelH, 18); ctx.fill();
-    ctx.strokeStyle = light ? "#d7e7e7" : "#2a4354"; ctx.lineWidth = 1; ctx.stroke();
-    ctx.fillStyle = accent; ctx.font = "700 13px Inter, PingFang SC, system-ui, sans-serif";
-    ctx.fillText(rhythm ? t("shareRhythmEyebrow") : t("shareTokensEyebrow"), panelX + 28, panelY + 34);
-    if (rhythm) {
-      const rows = state.heatmap?.rows || [];
-      const hourRows = [...rows].sort((a, b) => Number(b.calls || 0) - Number(a.calls || 0));
-      const peak = hourRows[0];
-      const dayTotals = new Map();
-      for (const row of rows) dayTotals.set(row.weekday, (dayTotals.get(row.weekday) || 0) + Number(row.calls || 0));
-      const dayMax = Math.max(1, ...dayTotals.values());
-      const days = language() === "zh" ? ["日", "一", "二", "三", "四", "五", "六"] : ["S", "M", "T", "W", "T", "F", "S"];
-      ctx.fillStyle = textColor; ctx.font = "700 28px Inter, PingFang SC, system-ui, sans-serif";
-      ctx.fillText(peak ? `${String(peak.hour).padStart(2, "0")}:00` : "—", panelX + 28, panelY + 88);
-      ctx.fillStyle = muted; ctx.font = "600 11px Inter, PingFang SC, system-ui, sans-serif";
-      ctx.fillText(peak ? t("shareRhythmPeak", { calls: number(peak.calls) }) : t("shareLatestUnknown"), panelX + 28, panelY + 111);
-      days.forEach((day, index) => {
-        const value = dayTotals.get((index + 1) % 7) || 0;
-        const y = panelY + 140 + index * 12;
-        ctx.fillStyle = muted; ctx.font = "500 9px Inter, system-ui, sans-serif"; ctx.fillText(day, panelX + 28, y + 5);
-        ctx.fillStyle = stroke; ctx.fillRect(panelX + 48, y, 350, 7);
-        ctx.fillStyle = accent; ctx.fillRect(panelX + 48, y, Math.max(3, 350 * value / dayMax), 7);
-        ctx.fillStyle = muted; ctx.fillText(number(value), panelX + 414, y + 5);
-      });
-    } else {
-      const avg = current.calls ? Math.round(current.tokens / current.calls) : 0;
-      const dailyTokens = new Map();
-      for (const row of state.series.rows) {
-        const key = localDateKey(row.bucket);
-        dailyTokens.set(key, (dailyTokens.get(key) || 0) + Number(row.tokens || 0));
-      }
-      const values = [...dailyTokens.values()].slice(-20);
-      const maxTokens = Math.max(1, ...values);
-      ctx.fillStyle = textColor; ctx.font = "700 30px Inter, system-ui, sans-serif";
-      ctx.fillText(showTokens ? compact(avg) : "—", panelX + 28, panelY + 92);
-      ctx.fillStyle = muted; ctx.font = "600 13px Inter, PingFang SC, system-ui, sans-serif";
-      ctx.fillText(showTokens ? t("shareAverageToken", { value: compact(avg) }) : t("shareTokensHidden"), panelX + 30, panelY + 116);
-      ctx.fillStyle = muted; ctx.font = "500 11px Inter, PingFang SC, system-ui, sans-serif";
-      ctx.fillText(t("shareTokenTrend"), panelX + 30, panelY + 145);
-      if (showTokens) {
-        const barW = values.length ? 450 / values.length : 0;
-        values.forEach((value, index) => {
-          const height = Math.max(3, (value / maxTokens) * 46);
-          ctx.fillStyle = accent;
-          ctx.globalAlpha = 0.35 + (index / Math.max(1, values.length - 1)) * 0.55;
-          ctx.fillRect(panelX + 30 + index * barW, panelY + 196 - height, Math.max(2, barW - 3), height);
-        });
-        ctx.globalAlpha = 1;
-      }
-    }
-  } else {
-    const left = 520, top = 262, width = 574, height = 208;
-    const span = Math.max(1, state.range.to - state.range.from);
-    const firstDay = startOfLocalDay(state.range.from);
-    const dayCount = Math.max(1, localDayNumber(state.range.to - 1) - localDayNumber(firstDay) + 1);
-    const useHourly = span <= 2 * 86400 && state.series?.range.bucket < 86400;
-    const binCount = useHourly ? 24 : dayCount <= 31 ? Math.max(2, dayCount) : 28;
-    const bins = Array(binCount).fill(0);
-    const samples = useHourly ? state.series.rows : current.days;
-    for (const sample of samples) {
-      const time = sample.time ?? sample.bucket;
-      const index = useHourly
-        ? Math.floor(((time - state.range.from) / span) * binCount)
-        : dayCount <= 31
-          ? Math.max(0, localDayNumber(time) - localDayNumber(firstDay))
-          : Math.floor(((time - state.range.from) / span) * binCount);
-      bins[Math.min(binCount - 1, Math.max(0, index))] += sample.calls;
-    }
-    const max = Math.max(1, ...bins);
-    ctx.strokeStyle = stroke;
-    for (let i = 0; i < 4; i++) {
-      const y = top + (height / 3) * i;
-      ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(left + width, y); ctx.stroke();
-    }
-    const fill = ctx.createLinearGradient(0, top, 0, top + height);
-    fill.addColorStop(0, light ? "#0c817a44" : "#68e2d244");
-    fill.addColorStop(1, light ? "#0c817a00" : "#68e2d200");
-    const points = bins.map((value, index) => ({
-      x: left + (index / (binCount - 1)) * width,
-      y: top + height - (value / max) * (height - 18),
-    }));
-    ctx.beginPath();
-    drawSmoothPath(ctx, points);
-    ctx.lineTo(left + width, top + height);
-    ctx.lineTo(left, top + height);
-    ctx.closePath();
-    ctx.fillStyle = fill;
-    ctx.fill();
-    ctx.beginPath();
-    drawSmoothPath(ctx, points);
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = 4;
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
-    ctx.stroke();
-  }
-  if (!mix) {
-  const legendEntries = current.models.slice(0, 5).map((entry, index) => ({
-      label: entry.model.slice(0, 18),
-      share: entry.share,
-      color: shareColorFor(entry.model, index),
-    }));
-    if (current.models.length > 5)
-      legendEntries.push({
-        label: t("shareOther"),
-        share: current.models.slice(5).reduce((total, entry) => total + entry.share, 0),
-        color: shareColorFor("__other__"),
-      });
-    let x = 84;
-    let y = 520;
-    ctx.font = "600 14px Inter, PingFang SC, system-ui, sans-serif";
-    for (const [index, entry] of legendEntries.entries()) {
-      if (index === 3) { x = 84; y = 544; }
-      ctx.fillStyle = entry.color;
-      ctx.beginPath(); ctx.arc(x + 5, y - 5, 5, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = textColor;
-      const label = `${entry.label}  ${Math.round(entry.share * 100)}%`;
-      ctx.fillText(label, x + 20, y);
-      x += Math.min(270, ctx.measureText(label).width + 48);
-    }
-    }
-  ctx.strokeStyle = stroke;
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(82, 565); ctx.lineTo(1116, 565); ctx.stroke();
-  ctx.font = "500 14px Inter, PingFang SC, system-ui, sans-serif";
-  ctx.fillStyle = muted;
-  const partial = firstAvailable() != null && firstAvailable() > state.range.from;
-  const footer = state.meta.demo ? t("shareDemoFooter") : t("shareLocalFooter");
-  ctx.fillText(partial ? `${footer} · ${t("shareCoverage", { date: dateText(firstAvailable(), false) })}` : footer, 82, 600);
-  ctx.textAlign = "right";
-  ctx.font = "600 13px Inter, system-ui, sans-serif";
-  ctx.fillStyle = muted;
-  const githubPath = new Path2D("M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z");
-  const repositoryTextLeft = 1115 - ctx.measureText(SHARE_REPOSITORY).width;
-  ctx.save();
-  ctx.translate(repositoryTextLeft - 16 * 1.35 - 10, 584);
-  ctx.scale(1.35, 1.35);
-  ctx.fill(githubPath);
   ctx.restore();
-  ctx.fillText(SHARE_REPOSITORY, 1115, 600);
-  ctx.textAlign = "left";
+  box(64, 345, 1072, 210);
+  const timeline = shareTimeline(metric), bins = timeline.bins;
+  text(t(tokenMetric ? "shareModelTokensChart" : "shareModelCallsChart"), 86, 370, 13, colors.text, 700);
+  text(timeline.caption, 1114, 370, 10, colors.muted, 500, "right", 720);
+  const plotted = segments.map((entry) => bins.map((bin) => entry.other
+    ? [...bin.models].reduce((sum, [model, value]) => sum + (segments.some((item) => !item.other && item.model === model) ? 0 : value), 0)
+    : bin.models.get(entry.model) || 0));
+  const left = 126, top = 391, width = 988, height = 119, bottom = top + height;
+  const maximum = Math.max(1, ...plotted.flat());
+  const rawStep = maximum * 1.1 / 4, power = 10 ** Math.floor(Math.log10(rawStep));
+  const step = Math.max(1, [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find((n) => n * power >= rawStep) * power), ceiling = step * 4;
+  for (let i = 0; i <= 4; i++) {
+    const y = bottom - i * height / 4; rule(left, y, left + width, y);
+    text(compact(step * i).replace(/\.0(?=[KMB万亿])/, ""), left - 14, y + 4, 10, colors.muted, 500, "right");
+  }
+  const xAt = (index) => left + ((bins[index].from + bins[index].to) / 2 - state.series.range.from) / (state.series.range.to - state.series.range.from) * width;
+  if (!current[metric]) text(t("shareNoTokens"), left + width / 2, top + height / 2, 13, colors.muted, 600, "center");
+  else segments.forEach((entry, segmentIndex) => {
+    const points = bins.map((bin, index) => ({ x: xAt(index), y: bottom - plotted[segmentIndex][index] / ceiling * height }));
+    if (segmentIndex === 0) {
+      const fill = ctx.createLinearGradient(0, top, 0, bottom);
+      fill.addColorStop(0, light ? `${entry.color}18` : `${entry.color}25`); fill.addColorStop(1, `${entry.color}00`);
+      ctx.beginPath(); drawSmoothPath(ctx, points); ctx.lineTo(points.at(-1).x, bottom); ctx.lineTo(points[0].x, bottom); ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+    }
+    ctx.beginPath(); drawSmoothPath(ctx, points); ctx.strokeStyle = entry.color;
+    ctx.lineWidth = segmentIndex === 0 ? 2.7 : 2; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke();
+    const peak = Math.max(...plotted[segmentIndex]);
+    points.forEach((point, index) => {
+      if (points.length <= 10 || plotted[segmentIndex][index] === peak && peak > 0) {
+        ctx.fillStyle = entry.color; ctx.beginPath(); ctx.arc(point.x, point.y, plotted[segmentIndex][index] === peak && peak > 0 ? 2.8 : 1.7, 0, Math.PI * 2); ctx.fill();
+      }
+    });
+  });
+  const ticks = Array.from({ length: 5 }, (_, index) => ({
+    x: left + index / 4 * width,
+    label: timeline.tickLabel(state.series.range.from + (state.series.range.to - state.series.range.from) * index / 4),
+    align: index === 0 ? "left" : index === 4 ? "right" : "center",
+  })).filter((tick, index, all) => index === all.length - 1 || !all.slice(index + 1).some((next) => next.label === tick.label));
+  for (const tick of ticks) { rule(tick.x, bottom + 2, tick.x, bottom + 7); text(tick.label, tick.x, bottom + 24, 10, colors.muted, 500, tick.align); }
+  segments.forEach((entry, index) => {
+    const col = index % 3, row = Math.floor(index / 3), x = 64 + col * 362, y = 577 + row * 25;
+    ctx.fillStyle = entry.color; ctx.beginPath(); ctx.arc(x + 4, y - 4, 4, 0, Math.PI * 2); ctx.fill();
+    text(entry.model, x + 17, y, 11, colors.text, 600, "left", 250);
+    text(`${entry.percent}%`, x + 316, y, 11, colors.muted, 600, "right");
+  });
+  rule(64, 619, 1136, 619);
+  const footer = state.meta.demo ? t("shareDemoFooter") : t("shareLocalFooter");
+  const partial = firstAvailable() != null && firstAvailable() > state.range.from;
+  text(partial ? `${footer} · ${t("shareCoverage", { date: dateText(firstAvailable(), false) })}` : footer, 64, 641, 11, colors.muted, 500, "left", 805);
+  ctx.font = "600 12px Inter, PingFang SC, system-ui, sans-serif";
+  const nameLeft = 1134 - ctx.measureText(SHARE_REPOSITORY).width;
+  const githubPath = new Path2D("M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z");
+  ctx.save(); ctx.translate(nameLeft - 29, 626); ctx.scale(1.2, 1.2); ctx.fillStyle = colors.muted; ctx.fill(githubPath); ctx.restore();
+  text(SHARE_REPOSITORY, 1134, 641, 12, colors.muted, 600, "right");
   return canvas;
 }
 
@@ -2042,11 +1951,12 @@ function updateShareTemplateChoices() {
   if (!select) return;
   $$("[data-share-template]").forEach((button) => {
     const value = button.dataset.shareTemplate;
-    const labels = { story: "shareStoryChoice", mix: "shareMixChoice", rhythm: "shareRhythmChoice", tokens: "shareTokensChoice" };
+    const labels = { calls: "shareCallsChoice", tokens: "shareTokenChoice" };
     button.textContent = t(labels[value] || value);
     button.classList.toggle("active", select.value === value);
-    button.setAttribute("role", "tab");
-    button.setAttribute("aria-selected", String(select.value === value));
+    button.setAttribute("aria-pressed", String(select.value === value));
+    button.disabled = value === "tokens" && !$("#share-show-tokens").checked;
+    button.title = button.disabled ? t("shareEnableTokens") : "";
   });
 }
 
@@ -2057,18 +1967,18 @@ function updateSharePreview() {
 function openShareDialog(template = null) {
   if (!state.report?.current.calls) return toast(t("exportEmpty"));
   const select = $("#share-template");
-  const validTemplates = new Set(["story", "mix", "rhythm", "tokens"]);
+  const validTemplates = new Set(["calls", "tokens"]);
   select.value = validTemplates.has(template)
     ? template
     : validTemplates.has(select.value)
       ? select.value
-      : "story";
+      : "calls";
   updateShareTemplateChoices();
   updateSharePreview();
   $("#share-dialog").showModal();
 }
 $("#share-button").addEventListener("click", openShareDialog);
-$("#report-share").addEventListener("click", () => openShareDialog("story"));
+$("#report-share").addEventListener("click", () => openShareDialog("calls"));
 $("#share-close").addEventListener("click", () => $("#share-dialog").close());
 $("#share-dialog").addEventListener("click", (event) => {
   if (event.target === $("#share-dialog")) $("#share-dialog").close();
@@ -2079,7 +1989,11 @@ $$("[data-share-template]").forEach((button) => button.addEventListener("click",
   updateShareTemplateChoices();
   updateSharePreview();
 }));
-$("#share-show-tokens").addEventListener("change", updateSharePreview);
+$("#share-show-tokens").addEventListener("change", () => {
+  if (!$("#share-show-tokens").checked && $("#share-template").value === "tokens") $("#share-template").value = "calls";
+  updateShareTemplateChoices();
+  updateSharePreview();
+});
 $("#share-show-latest").addEventListener("change", updateSharePreview);
 $("#share-show-cost").addEventListener("change", updateSharePreview);
 $("#share-download").addEventListener("click", () => {

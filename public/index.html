@@ -52,7 +52,7 @@
             </div>
             <p>你的用量数据留在本机。<br />看板只读取 CC Switch 数据库。</p>
           </div>
-          <div class="side-version"><span>CCSwitch Pulse</span><span>v0.1.7</span></div>
+          <div class="side-version"><span>CCSwitch Pulse</span><span>v0.1.8</span></div>
         </div>
       </aside>
 
@@ -457,12 +457,10 @@
       <div class="share-dialog-head"><div><span class="section-kicker">分享你的脉搏</span><h2 id="share-title">生成分享图</h2></div><button id="share-close" class="share-close" type="button" aria-label="关闭">×</button></div>
       <p>分享图在浏览器本地生成。请预览后自行下载或复制。</p>
       <div class="share-options">
-        <div class="share-theme-field"><span>卡片主题</span><div id="share-template-choices" class="share-template-choices" role="tablist" aria-label="卡片主题">
-          <button type="button" data-share-template="story" class="active">周期故事</button>
-          <button type="button" data-share-template="mix">模型构成</button>
-          <button type="button" data-share-template="rhythm">使用节奏</button>
-          <button type="button" data-share-template="tokens">Token 节奏</button>
-        </div><select id="share-template" hidden><option value="story" selected>周期故事</option><option value="mix">模型构成</option><option value="rhythm">使用节奏</option><option value="tokens">Token 节奏</option></select></div>
+        <div class="share-theme-field"><span>报告指标</span><div id="share-template-choices" class="share-template-choices" role="group" aria-label="报告指标">
+          <button type="button" data-share-template="calls" class="active">调用次数</button>
+          <button type="button" data-share-template="tokens">Token 用量</button>
+        </div><select id="share-template" hidden><option value="calls" selected>调用次数</option><option value="tokens">Token 用量</option></select></div>
         <label class="share-check"><input id="share-show-tokens" type="checkbox" checked />显示Token</label>
         <label class="share-check"><input id="share-show-latest" type="checkbox" checked />显示最晚活跃</label>
         <label class="share-check"><input id="share-show-cost" type="checkbox" />显示估算费用</label>

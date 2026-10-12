@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.1.8 — 2026-10-12
+
+- Replaced four share themes with two integrated reports: Calls and Tokens.
+- Combined model shares and per-model trend lines using the same metric, colors and complete range.
+- Added full year/timezone context, readable time/value ticks, monotone curves and clear aggregation labels.
+- Preserved daily per-model token totals for sharing even when the dashboard is weekly; removed the last-20-days truncation.
+- Made rounded percentages add up to 100%, handled zero tokens honestly, and preserved privacy switches.
+- Refreshed bilingual, light/dark documentation images and added model/color/axis/privacy regression checks.
+
 ## v0.1.7 — 2026-10-12
 
 - Made selected-range totals the default ranking, including all historical data for All time.

@@ -353,13 +353,22 @@ test("1280px range controls adapt to wider platform fallback fonts", async ({ pa
 test("share exports include model counts and keep the repository icon clear of its name", async ({ page }) => {
   await waitForDashboard(page);
   await page.evaluate(() => {
-    window.shareMarks = { texts: [], icons: [] };
+    window.shareMarks = { texts: [], icons: [], lines: [] };
     const prototype = CanvasRenderingContext2D.prototype;
-    const fillText = prototype.fillText, fill = prototype.fill;
+    const fillText = prototype.fillText, fill = prototype.fill, stroke = prototype.stroke;
+    prototype.stroke = function(...args) {
+      if (this.canvas.width === 2400 && this.canvas.height === 1350 && this.lineWidth >= 2) window.shareMarks.lines.push(this.strokeStyle);
+      return stroke.apply(this, args);
+    };
     prototype.fillText = function(text, x, y, ...rest) {
       if (this.canvas.width === 2400 && this.canvas.height === 1350) {
         const transform = this.getTransform();
-        window.shareMarks.texts.push({ text: String(text), left: (x - (this.textAlign === "right" ? this.measureText(text).width : 0)) * transform.a + transform.e });
+        const measurement = this.measureText(text);
+        const left = (x - (this.textAlign === "right" ? measurement.width : this.textAlign === "center" ? measurement.width / 2 : 0)) * transform.a + transform.e;
+        window.shareMarks.texts.push({ text: String(text), left, right: left + measurement.width * transform.a,
+          top: (y - measurement.actualBoundingBoxAscent) * transform.d + transform.f,
+          bottom: (y + measurement.actualBoundingBoxDescent) * transform.d + transform.f,
+          baseline: y * transform.d + transform.f });
       }
       return fillText.call(this, text, x, y, ...rest);
     };
@@ -377,16 +386,134 @@ test("share exports include model counts and keep the repository icon clear of i
       if (await page.locator("html").getAttribute("data-theme") !== theme) await page.locator("#theme-toggle").click();
       const count = await page.locator("#kpi-models").textContent();
       await page.locator("#share-button").click();
-      for (const template of ["story", "mix", "rhythm", "tokens"]) {
-        await page.evaluate(() => window.shareMarks = { texts: [], icons: [] });
+      await expect(page.locator("[data-share-template]")).toHaveCount(2);
+      for (const template of ["calls", "tokens"]) {
+        await page.evaluate(() => window.shareMarks = { texts: [], icons: [], lines: [] });
         await page.locator(`[data-share-template="${template}"]`).click();
         const marks = await page.evaluate(() => window.shareMarks);
         const name = marks.texts.find((mark) => mark.text === "ccswitch-pulse");
+        const colors = await page.evaluate((metric) => shareSegments(metric).map((entry) => entry.color), template);
+        expect(new Set(colors).size).toBe(colors.length);
+        expect(marks.lines.sort()).toEqual(colors.sort());
         expect(name.left - marks.icons[0].right).toBeGreaterThanOrEqual(19);
-        if (template === "mix") expect(marks.texts.some((mark) => mark.text === `${count} ${lang === "zh" ? "个模型" : "models"}`)).toBe(true);
+        for (const mark of marks.texts) {
+          expect(mark.left, mark.text).toBeGreaterThanOrEqual(64);
+          expect(mark.right, mark.text).toBeLessThanOrEqual(2336);
+          expect(mark.top, mark.text).toBeGreaterThanOrEqual(48);
+          expect(mark.bottom, mark.text).toBeLessThanOrEqual(1302);
+        }
+        expect(marks.texts.some((mark) => mark.text.includes(`${count} ${lang === "zh" ? "个模型" : "models"}`))).toBe(true);
+        {
+          const ticks = marks.texts.filter((mark) => Math.abs(mark.baseline - 1068) < 1);
+          expect(ticks.length).toBeGreaterThanOrEqual(2);
+          for (let i = 1; i < ticks.length; i++) expect(ticks[i].left - ticks[i - 1].right).toBeGreaterThanOrEqual(12);
+        }
         await expect.poll(() => page.locator("#share-preview").evaluate((image) => [image.naturalWidth, image.naturalHeight])).toEqual([2400, 1350]);
       }
       await page.locator("#share-close").click();
     }
   }
+});
+
+test("share time axes cover the selected range and token bins retain the full daily total even for weekly charts", async ({ page }) => {
+  await waitForDashboard(page);
+  for (const range of ["1", "7", "all"]) {
+    await seriesAfter(page, () => page.locator(`[data-range="${range}"]`).click());
+    await expect(page.locator(".ranking-panel")).toHaveAttribute("aria-busy", "false");
+    for (const metric of ["calls", "tokens"]) {
+      const plan = await page.evaluate((metric) => {
+        const timeline = shareTimeline(metric);
+        return { bins: timeline.bins.map((bin) => ({ ...bin, models: [...bin.models] })), caption: timeline.caption, hourly: timeline.hourly,
+          expected: state.report.current[metric], range: state.range,
+          modelTotals: state.report.current.models.map((model) => ({ model: model.model, value: model[metric] })),
+          labels: timeline.bins.map((bin) => timeline.tickLabel(bin.from)) };
+      }, metric);
+      expect(plan.bins[0].from).toBe(plan.range.from);
+      expect(plan.bins.at(-1).to).toBe(plan.range.to);
+      expect(plan.bins.reduce((sum, bin) => sum + bin.value, 0)).toBe(plan.expected);
+      for (const bin of plan.bins) expect(bin.models.reduce((sum, [, value]) => sum + value, 0)).toBe(bin.value);
+      const modelTotals = new Map();
+      for (const bin of plan.bins) for (const [model, value] of bin.models) modelTotals.set(model, (modelTotals.get(model) || 0) + value);
+      for (const model of plan.modelTotals) expect(modelTotals.get(model.model) || 0).toBe(model.value);
+      for (let i = 1; i < plan.bins.length; i++) expect(plan.bins[i].from).toBe(plan.bins[i - 1].to);
+      expect(plan.hourly).toBe(range === "1");
+      if (range === "1") expect(plan.labels.every((label) => /\d{2}:\d{2}/.test(label))).toBe(true);
+      if (range === "all") {
+        expect(plan.labels[0]).toMatch(/2025/);
+        expect(plan.labels.at(-1)).toMatch(/2026/);
+      }
+    }
+  }
+  await seriesAfter(page, () => page.locator("#bucket-select").selectOption("1w"));
+  const weekly = await page.evaluate(() => ({
+    bucket: state.series.range.bucket,
+    plotted: shareTimeline("tokens").bins.reduce((sum, bin) => sum + bin.value, 0),
+    expected: state.report.current.tokens,
+    first: shareTimeline("tokens").bins[0].from,
+    from: state.range.from,
+  }));
+  expect(weekly.bucket).toBe(604800);
+  expect(weekly.plotted).toBe(weekly.expected);
+  expect(weekly.first).toBe(weekly.from);
+});
+
+test("the token report handles a valid zero-token range without inventing percentages or leaking other metrics", async ({ page }) => {
+  await page.route(/\/api\/(series|report)\?/, async (route) => {
+    const response = await route.fetch(), body = await response.json();
+    if (body.rows) {
+      body.totals.tokens = 0;
+      for (const row of body.rows) row.tokens = 0;
+    } else {
+      for (const period of [body.current, body.previous].filter(Boolean)) {
+        period.tokens = 0;
+        for (const rows of [period.days, period.models, period.modelDays]) for (const row of rows) row.tokens = 0;
+      }
+    }
+    await route.fulfill({ response, json: body });
+  });
+  await waitForDashboard(page);
+  await page.evaluate(() => {
+    window.zeroTokenTexts = [];
+    const fillText = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function(text, ...args) {
+      if (this.canvas.width === 2400 && this.canvas.height === 1350) window.zeroTokenTexts.push(String(text));
+      return fillText.call(this, text, ...args);
+    };
+  });
+  await page.locator("#share-button").click();
+  await page.locator('[data-share-template="tokens"]').click();
+  expect(await page.evaluate(() => shareSegments("tokens").reduce((sum, entry) => sum + entry.percent, 0))).toBe(0);
+  expect((await page.evaluate(() => window.zeroTokenTexts)).some((text) => /未记录 Token|No token usage/.test(text))).toBe(true);
+  await expect.poll(() => page.locator("#share-preview").evaluate((image) => [image.naturalWidth, image.naturalHeight])).toEqual([2400, 1350]);
+});
+
+test("redesigned share cards preserve privacy and their model percentages sum to 100", async ({ page }) => {
+  await waitForDashboard(page);
+  for (const metric of ["calls", "tokens"]) {
+    const shares = await page.evaluate((metric) => shareSegments(metric).map((entry) => entry.percent), metric);
+    expect(shares.reduce((sum, share) => sum + share, 0)).toBe(100);
+  }
+  await page.evaluate(() => {
+    window.privateShareTexts = [];
+    const fillText = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function(text, ...args) {
+      if (this.canvas.width === 2400 && this.canvas.height === 1350) window.privateShareTexts.push(String(text));
+      return fillText.call(this, text, ...args);
+    };
+  });
+  const tokenValue = await page.evaluate(() => compact(state.report.current.tokens));
+  await page.locator("#share-button").click();
+  await page.locator('[data-share-template="tokens"]').click();
+  await page.locator("#share-show-latest").uncheck();
+  await page.evaluate(() => window.privateShareTexts = []);
+  await page.locator("#share-show-tokens").uncheck();
+  await expect(page.locator('[data-share-template="tokens"]')).toBeDisabled();
+  await expect(page.locator('[data-share-template="calls"]')).toHaveAttribute("aria-pressed", "true");
+  const texts = await page.evaluate(() => window.privateShareTexts);
+  expect(texts).not.toContain(tokenValue);
+  expect(texts.some((text) => /最晚活跃|Last active/.test(text))).toBe(false);
+  expect(texts.some((text) => /Token 已隐藏|Tokens hidden/.test(text))).toBe(true);
+  expect(texts.some((text) => /调用趋势|Calls over time/.test(text))).toBe(true);
+  await page.locator("#share-show-cost").check();
+  expect((await page.evaluate(() => window.privateShareTexts)).some((text) => /估算费用|Estimated cost/.test(text))).toBe(true);
 });

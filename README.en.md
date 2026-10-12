@@ -13,7 +13,7 @@
   <a href="#data-and-privacy">Data and privacy</a>
 </p>
 
-![CCSwitch Pulse dark theme](docs/images/dashboard-dark-en-69da61231d4a.png)
+![CCSwitch Pulse dark theme](docs/images/dashboard-dark-en-06ae01882f73.png)
 
 > Screenshots use fixed-anchor synthetic data and contain no personal usage records. Model names and distribution shapes follow the structure of aggregated local usage, not copied records. CCSwitch Pulse targets desktop browsers and supports Chinese, English, light, and dark themes.
 
@@ -64,7 +64,7 @@ npm start -- --db /path/to/cc-switch.db
 
 ## Updating
 
-Current version: `v0.1.7`. Stop the previous process with `Ctrl+C` before updating; refreshing the browser does not replace the running app. The project does not auto-update local installations; updates are explicit so a data-reading change never happens unexpectedly.
+Current version: `v0.1.8`. Stop the previous process with `Ctrl+C` before updating; refreshing the browser does not replace the running app. The project does not auto-update local installations; updates are explicit so a data-reading change never happens unexpectedly.
 
 ### Track the latest main branch
 
@@ -77,7 +77,7 @@ npx --yes --prefer-online "github:aa8j/ccswitch-pulse"
 Pin this release to avoid unexpected changes:
 
 ```bash
-npx --yes "github:aa8j/ccswitch-pulse#v0.1.7"
+npx --yes "github:aa8j/ccswitch-pulse#v0.1.8"
 ```
 
 ### Update a local checkout
@@ -109,12 +109,14 @@ Rankings default to **all models in the selected date range**; All time includes
 
 ## Reports and share cards
 
-The period report includes the leading model, active days, peak usage, daily average, average tokens, model mix, and data coverage. Share cards include four themes: Period Story, Model Mix, Usage Rhythm, and Token Rhythm.
+The period report includes the leading model, active days, peak usage, daily average, average tokens, model mix, and data coverage. Share cards offer just two templates: Calls and Tokens.
+
+Each 2400 × 1350 image combines totals, a model-share strip, and per-model trend lines with the same metric and colors. Complete dates, timezone, time/value ticks, and aggregation labels keep the chart readable. Long ranges cover the full history rather than just the last few days. With more than five models, the metric's Top 5 are shown individually and the rest are combined as Other without dropping totals. Hiding tokens automatically switches to the Calls report.
 
 <details>
 <summary><strong>Light theme and period report</strong></summary>
 
-![CCSwitch Pulse light theme](docs/images/dashboard-light-en-b0007f7be627.png)
+![CCSwitch Pulse light theme](docs/images/dashboard-light-en-6089923be451.png)
 
 ![CCSwitch Pulse period report](docs/images/report-light-en-76e95a7e73f0.png)
 
@@ -123,7 +125,7 @@ The period report includes the leading model, active days, peak usage, daily ave
 <details>
 <summary><strong>Share card example</strong></summary>
 
-![CCSwitch Pulse share card](docs/images/share-light-en-34140f171fcc.png)
+![CCSwitch Pulse share card](docs/images/share-light-en-106536d2848a.png)
 
 </details>
 

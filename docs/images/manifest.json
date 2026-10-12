@@ -1,15 +1,15 @@
 {
-  "appVersion": "0.1.7",
-  "sourceFingerprint": "71f71df04e3bb34f5b5cc6fbe5be918353a2d3899270dedf55b0c57ded679eba",
-  "capturedAt": "2026-10-12T03:04:23.796Z",
+  "appVersion": "0.1.8",
+  "sourceFingerprint": "ef803c11b91318cbd8c009366418a5f08c8b9addf80d2210aace53a5ccbc43ba",
+  "capturedAt": "2026-10-12T03:45:15.688Z",
   "demo": true,
   "images": [
     {
       "id": "dashboard-dark-zh",
-      "path": "docs/images/dashboard-dark-zh-0fb5ad19da57.png",
+      "path": "docs/images/dashboard-dark-zh-994c9f8f71ef.png",
       "width": 3200,
       "height": 2622,
-      "sha256": "0fb5ad19da579347d5ee775f14436cb75784029135b412c04f59ff12225352fb"
+      "sha256": "994c9f8f71ef9ffb9d5a49f2e1838f1f5939d615db0114678ea0ff74bfeee0f4"
     },
     {
       "id": "report-dark-zh",
@@ -20,10 +20,10 @@
     },
     {
       "id": "share-dark-zh",
-      "path": "docs/images/share-dark-zh-bd661aa36a1c.png",
+      "path": "docs/images/share-dark-zh-8632f3230355.png",
       "width": 2400,
       "height": 1350,
-      "sha256": "bd661aa36a1cf884d6d5c58de6ca56b86fdce7434f847b1c380b0bd1699f5536"
+      "sha256": "8632f3230355d7f28288b2e4c126e4eab580242b297fd2e04b32f9c09c970596"
     },
     {
       "id": "date-range-dark-zh",
@@ -34,10 +34,10 @@
     },
     {
       "id": "dashboard-light-zh",
-      "path": "docs/images/dashboard-light-zh-196fd08f6f29.png",
+      "path": "docs/images/dashboard-light-zh-59c06d9f17cc.png",
       "width": 3200,
       "height": 2622,
-      "sha256": "196fd08f6f29f55a7eb45f37357959950d9194448a19e04edccdd3f9d06464f3"
+      "sha256": "59c06d9f17cc438167c397125cd1127846b4616ee4262bd9e3ad8b7af4761eb7"
     },
     {
       "id": "report-light-zh",
@@ -48,17 +48,17 @@
     },
     {
       "id": "share-light-zh",
-      "path": "docs/images/share-light-zh-e3dd914bd345.png",
+      "path": "docs/images/share-light-zh-cb082f2542bd.png",
       "width": 2400,
       "height": 1350,
-      "sha256": "e3dd914bd3455cc82a75d655d1d2b1dc1959b287d3e2af14fe586e78ad03e791"
+      "sha256": "cb082f2542bd20321f08a44cfd203f6ed4a1ebdb792c813c4805717b8320b6ee"
     },
     {
       "id": "dashboard-dark-en",
-      "path": "docs/images/dashboard-dark-en-69da61231d4a.png",
+      "path": "docs/images/dashboard-dark-en-06ae01882f73.png",
       "width": 3200,
       "height": 2622,
-      "sha256": "69da61231d4a9f932c61c60500abb4c71ffba5a741e06a52639c2a68a8bacf6e"
+      "sha256": "06ae01882f73cc420c3643c7ed71fe28529da723d684f4d91c69f960ebca67fc"
     },
     {
       "id": "report-dark-en",
@@ -69,10 +69,10 @@
     },
     {
       "id": "share-dark-en",
-      "path": "docs/images/share-dark-en-1852a1c1cb48.png",
+      "path": "docs/images/share-dark-en-fdbae1685cea.png",
       "width": 2400,
       "height": 1350,
-      "sha256": "1852a1c1cb484c23361c4126e42782e5db15af92a0581146bafa01c86ce033ec"
+      "sha256": "fdbae1685ceae9e561842a55b4b861d2b6d8665b1cad4606edfb21c3c67be020"
     },
     {
       "id": "date-range-dark-en",
@@ -83,10 +83,10 @@
     },
     {
       "id": "dashboard-light-en",
-      "path": "docs/images/dashboard-light-en-b0007f7be627.png",
+      "path": "docs/images/dashboard-light-en-6089923be451.png",
       "width": 3200,
       "height": 2622,
-      "sha256": "b0007f7be6271f9baf87e0cb3c70cef9c7d357038ceff1e41ca9e035904ffa05"
+      "sha256": "6089923be4514a7bf6e94c7a0b4a73957281bb6fe8bfdfd2bbf0fc878ece5a03"
     },
     {
       "id": "report-light-en",
@@ -97,10 +97,10 @@
     },
     {
       "id": "share-light-en",
-      "path": "docs/images/share-light-en-34140f171fcc.png",
+      "path": "docs/images/share-light-en-106536d2848a.png",
       "width": 2400,
       "height": 1350,
-      "sha256": "34140f171fccf196f58a7b2acdfe538c753e0d793f824ed6d3aa0451df5ddb6f"
+      "sha256": "106536d2848abe8a33825a48387b8a7cbca3294c3663c2e69d3f441b2f52bc72"
     }
   ]
 }

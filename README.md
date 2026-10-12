@@ -13,7 +13,7 @@
   <a href="#数据与隐私">数据与隐私</a>
 </p>
 
-![CCSwitch Pulse 深色主题](docs/images/dashboard-dark-zh-0fb5ad19da57.png)
+![CCSwitch Pulse 深色主题](docs/images/dashboard-dark-zh-994c9f8f71ef.png)
 
 > 截图使用固定锚点的合成数据，不包含个人调用记录；模型名称和分布形状参考本地聚合数据的结构，不复制真实记录。CCSwitch Pulse 面向桌面浏览器，支持中英文、浅色和深色主题。
 
@@ -64,7 +64,7 @@ npm start -- --db /path/to/cc-switch.db
 
 ## 更新
 
-当前版本：`v0.1.7`。更新前先在旧程序终端按 `Ctrl+C` 停止；仅刷新网页不会替换正在运行的程序。项目不会自动更新本地程序，避免在没有确认的情况下改变数据读取逻辑；更新由你显式选择版本。
+当前版本：`v0.1.8`。更新前先在旧程序终端按 `Ctrl+C` 停止；仅刷新网页不会替换正在运行的程序。项目不会自动更新本地程序，避免在没有确认的情况下改变数据读取逻辑；更新由你显式选择版本。
 
 ### 使用最新主线
 
@@ -77,7 +77,7 @@ npx --yes --prefer-online "github:aa8j/ccswitch-pulse"
 固定到本次发布的版本：
 
 ```bash
-npx --yes "github:aa8j/ccswitch-pulse#v0.1.7"
+npx --yes "github:aa8j/ccswitch-pulse#v0.1.8"
 ```
 
 ### 更新本地源码
@@ -109,12 +109,14 @@ npm start
 
 ## 报告与分享卡
 
-周期报告包含主力模型、活跃天数、峰值、周期日均、平均 Token、模型构成和数据覆盖说明。分享卡支持四种主题：周期故事、模型构成、使用节奏和 Token 节奏。
+周期报告包含主力模型、活跃天数、峰值、周期日均、平均 Token、模型构成和数据覆盖说明。分享卡只保留两个模板：调用次数和 Token 用量。
+
+每张 2400 × 1350 高清图片都融合总量概览、模型占比条和各模型趋势折线，使用同一指标和同一套颜色。图中标明完整日期范围、时区、时间刻度、数值刻度及汇总粒度；长范围覆盖完整历史，不截取最后几天。超过五个模型时显示该指标的 Top 5，其余模型合并为“其他”，不丢失总量。关闭 Token 展示时自动切回调用次数报告。
 
 <details>
 <summary><strong>浅色主题与周期报告</strong></summary>
 
-![CCSwitch Pulse 浅色主题](docs/images/dashboard-light-zh-196fd08f6f29.png)
+![CCSwitch Pulse 浅色主题](docs/images/dashboard-light-zh-59c06d9f17cc.png)
 
 ![CCSwitch Pulse 周期报告](docs/images/report-light-zh-fa2d53bc3073.png)
 
@@ -123,7 +125,7 @@ npm start
 <details>
 <summary><strong>分享卡示例</strong></summary>
 
-![CCSwitch Pulse 分享卡](docs/images/share-light-zh-e3dd914bd345.png)
+![CCSwitch Pulse 分享卡](docs/images/share-light-zh-cb082f2542bd.png)
 
 </details>
 

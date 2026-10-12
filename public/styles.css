@@ -2322,6 +2322,7 @@ th:last-child {
 .share-template-choices button { border: 0; border-radius: 6px; padding: 7px 9px; background: transparent; color: var(--muted); font-size: 10px; cursor: pointer; white-space: nowrap; }
 .share-template-choices button.active { background: var(--teal); color: #0b2b2c; font-weight: 700; }
 .share-template-choices button:hover { color: var(--text); }
+.share-template-choices button:disabled { opacity: .45; cursor: not-allowed; }
 :root[data-theme="light"] .share-template-choices button.active { color: #ffffff; }
 @media (max-width: 900px) { .share-theme-field { flex-wrap: wrap; } .share-template-choices { flex-wrap: wrap; } }
 
