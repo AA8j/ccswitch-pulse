@@ -82,6 +82,8 @@ const state = {
   preset: "7",
   requestId: 0,
   rankValues: new Map(),
+  rankingScope: "range",
+  rankingRangeRows: [],
 };
 const chart = echarts.init($("#main-chart"), null, { renderer: "canvas" });
 new ResizeObserver(() => chart.resize()).observe($("#main-chart"));
@@ -524,6 +526,8 @@ async function loadData() {
   stopPlayback();
   const id = ++state.requestId;
   setText("#range-summary", t("loading"));
+  $(".ranking-panel").setAttribute("aria-busy", "true");
+  setText("#ranking-note", t("loading"));
   try {
     const qs = queryString();
     const reportParams = new URLSearchParams(qs);
@@ -549,8 +553,12 @@ async function loadData() {
       `${dateText(state.range.from)} — ${dateText(state.range.to)}`,
     );
   } catch (error) {
+    if (id !== state.requestId) return;
     setText("#range-summary", t("loadFailed"));
+    setText("#ranking-note", t("loadFailed"));
     toast(error.message);
+  } finally {
+    if (id === state.requestId) $(".ranking-panel").setAttribute("aria-busy", "false");
   }
 }
 
@@ -572,9 +580,15 @@ function prepareData() {
     bucketTotals.set(row.bucket, (bucketTotals.get(row.bucket) || 0) + Number(row.calls || 0));
   while (state.times.length > 1 && !bucketTotals.get(state.times.at(-1)))
     state.times.pop();
-  const totals = new Map();
-  for (const row of state.series.rows)
-    totals.set(row.model, (totals.get(row.model) || 0) + row.calls);
+  const modelTotals = new Map();
+  for (const row of state.series.rows) {
+    const total = modelTotals.get(row.model) || { model: row.model, calls: 0, tokens: 0, cost: 0 };
+    for (const metric of ["calls", "tokens", "cost"]) total[metric] += Number(row[metric] || 0);
+    modelTotals.set(row.model, total);
+  }
+  state.rankingRangeRows = [...modelTotals.values()];
+  state.rankingScope = "range";
+  const totals = new Map(state.rankingRangeRows.map((row) => [row.model, row.calls]));
   state.models = [...totals.keys()].sort(
     (a, b) => totals.get(b) - totals.get(a) || a.localeCompare(b),
   );
@@ -677,7 +691,14 @@ function toggleModel(model) {
     return;
   }
   if (state.selected.has(model)) state.selected.delete(model);
-  else state.selected.add(model);
+  else {
+    state.selected.add(model);
+    // A ranked model outside Top 5 must actually appear when enabled.
+    if (state.modelView === "top" && state.models.indexOf(model) >= 5) {
+      state.modelView = "all";
+      $("#model-view-select").value = "all";
+    }
+  }
   renderLegend();
   renderChart();
   renderRanking();
@@ -852,24 +873,17 @@ function renderChart() {
   );
 }
 
-function currentRows() {
+function rankingRows() {
   const time = state.times[state.cursor];
-  return state.series.rows
-    .filter((row) => row.bucket === time)
-    .sort((a, b) => metricValue(b) - metricValue(a));
+  const rows = state.rankingScope === "range"
+    ? state.rankingRangeRows
+    : state.series.rows.filter((row) => row.bucket === time);
+  return [...rows].sort((a, b) => metricValue(b) - metricValue(a) || a.model.localeCompare(b.model));
 }
 function renderPlayback() {
   if (!state.series || !state.times.length) return;
   const time = state.times[state.cursor];
   setText("#playback-time", dateText(time));
-  setText(
-    "#ranking-time",
-    t("rankingTime", {
-      date: dateText(time),
-      period: t(state.series.range.bucket === 604800 ? "currentWeek" :
-        state.series.range.bucket < 86400 ? "currentBucket" : "currentDate"),
-    }),
-  );
   setText("#timeline-start", dateText(state.times[0]));
   setText("#timeline-end", dateText(state.times.at(-1)));
   $("#scrubber").value = String(state.cursor);
@@ -879,7 +893,6 @@ function renderPlayback() {
       : Math.round((state.cursor / (state.times.length - 1)) * 100);
   $("#scrubber").style.background =
     `linear-gradient(90deg,var(--teal) ${percent}%,var(--scrubber-track) ${percent}%)`;
-  setText("#play-progress", `${percent}%`);
   renderRanking();
   renderRankingPulse();
 }
@@ -937,8 +950,11 @@ function renderRankingPulse() {
     host.append(bar);
   }
 }
+const numberAnimationFrames = new WeakMap();
 function animateNumber(element, target, formatter) {
   if (!element) return;
+  cancelAnimationFrame(numberAnimationFrames.get(element));
+  numberAnimationFrames.delete(element);
   const next = Number(target || 0);
   const previous = Number(element.dataset.numericValue ?? next);
   element.dataset.numericValue = String(next);
@@ -952,14 +968,32 @@ function animateNumber(element, target, formatter) {
     const progress = Math.min(1, (now - started) / duration);
     const eased = 1 - Math.pow(1 - progress, 3);
     element.textContent = formatter(previous + (next - previous) * eased);
-    if (progress < 1) requestAnimationFrame(frame);
+    if (progress < 1) numberAnimationFrames.set(element, requestAnimationFrame(frame));
+    else numberAnimationFrames.delete(element);
   };
-  requestAnimationFrame(frame);
+  numberAnimationFrames.set(element, requestAnimationFrame(frame));
 }
 
 function renderRanking() {
   if (!state.series || !state.times.length) return;
-  const rows = currentRows();
+  const isRange = state.rankingScope === "range";
+  const rows = rankingRows();
+  const time = state.times[state.cursor];
+  const from = isRange ? state.series.range.from : Math.max(time, state.series.range.from);
+  const to = isRange ? state.series.range.to : Math.min(time + state.series.range.bucket, state.series.range.to);
+  setText("#ranking-kicker", t(isRange ? "rankingRangeKicker" : "rankingBucketKicker"));
+  setText("#ranking-title", t(isRange ? "rankingRangeTitle" : "rankingBucketTitle"));
+  setText("#ranking-time", `${dateText(from)} — ${dateText(to)}`);
+  setText("#ranking-note", t(isRange ? "rankingRangeNote" : "rankingBucketNote"));
+  setText("#ranking-total-label", t(`ranking${isRange ? "Range" : "Bucket"}_${state.metric}`));
+  setText("#ranking-secondary-label", t(isRange ? "rankingModels" : "rankingProgress"));
+  const percent = state.times.length <= 1 ? 100 : Math.round(state.cursor / (state.times.length - 1) * 100);
+  setText("#play-progress", isRange ? number(rows.length) : `${percent}%`);
+  for (const button of $$("[data-ranking-scope]")) {
+    const active = button.dataset.rankingScope === state.rankingScope;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  }
   const host = $("#ranking-list");
   const previousRects = new Map([...host.children].map((element) => [element.dataset.model, element.getBoundingClientRect()]));
   const sum = rows.reduce((total, row) => total + metricValue(row), 0);
@@ -969,7 +1003,7 @@ function renderRanking() {
   if (!rows.length) {
     const empty = document.createElement("p");
     empty.className = "ranking-foot";
-    empty.textContent = t("noBucket");
+    empty.textContent = t(isRange ? "emptyRange" : "noBucket");
     host.append(empty);
     return;
   }
@@ -980,6 +1014,7 @@ function renderRanking() {
     element.dataset.model = row.model;
     element.tabIndex = 0;
     element.setAttribute("role", "button");
+    element.setAttribute("aria-pressed", String(state.selected.has(row.model)));
     element.setAttribute("aria-label", t("rankAria", { model: row.model, value: metricText(valueNumber) }));
     const head = document.createElement("div");
     head.className = "rank-row-head";
@@ -1001,7 +1036,7 @@ function renderRanking() {
     const fill = document.createElement("div");
     fill.className = "rank-fill";
     fill.style.background = colorFor(row.model);
-    fill.style.width = `${Math.max(3, (valueNumber / max) * 100)}%`;
+    fill.style.width = `${valueNumber > 0 ? Math.max(3, (valueNumber / max) * 100) : 0}%`;
     track.append(fill);
     head.append(ordinal, dot, name, value);
     element.append(head, track);
@@ -1590,6 +1625,7 @@ function seek(index) {
   stopPlayback();
   state.cursor = Math.max(0, Math.min(state.times.length - 1, index));
   state.anchor = state.cursor;
+  state.rankingScope = "bucket";
   renderChart();
   renderPlayback();
 }
@@ -1610,6 +1646,7 @@ function play() {
   }
   if (state.cursor >= state.times.length - 1) state.cursor = 0;
   state.anchor = state.cursor;
+  state.rankingScope = "bucket";
   setText("#play-symbol", "Ⅱ");
   $("#play-button").setAttribute("aria-label", t("pause"));
   renderChart();
@@ -2108,7 +2145,12 @@ $("#model-view-select").addEventListener("change", (event) => {
   state.legendExpanded = false;
   renderLegend();
   renderChart();
+  renderRanking();
 });
+$$("[data-ranking-scope]").forEach((button) => button.addEventListener("click", () => {
+  state.rankingScope = button.dataset.rankingScope;
+  renderRanking();
+}));
 $$(".metric-button").forEach((button) =>
   button.addEventListener("click", () => {
     state.metric = button.dataset.metric;

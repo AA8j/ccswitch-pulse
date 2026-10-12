@@ -60,6 +60,9 @@ async function captureReadme(page) {
 
         if (theme === "dark") {
           await preview.setViewportSize({ width: 1094, height: 1000 });
+          // Allow the app's 180ms resize debounce to finish before measuring
+          // a crop; coordinates taken during relayout can clip the first preset.
+          await preview.waitForTimeout(250);
           // Report capture scrolls the page. Reset before measuring a viewport
           // crop, so scrolling/resizing cannot clip the calendar example.
           await preview.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }));

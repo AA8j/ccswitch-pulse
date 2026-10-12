@@ -6,6 +6,163 @@ async function waitForDashboard(page) {
   await expect(page.locator("#kpi-calls")).not.toHaveText("—");
 }
 
+async function seriesAfter(page, action) {
+  const [response] = await Promise.all([
+    page.waitForResponse((response) => new URL(response.url()).pathname === "/api/series" && response.ok()),
+    action(),
+  ]);
+  return response.json();
+}
+
+async function expectRanking(page, rows, metric = "calls") {
+  const totals = new Map();
+  for (const row of rows) totals.set(row.model, (totals.get(row.model) || 0) + Number(row[metric] || 0));
+  const expected = [...totals].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 10)
+    .map(([model, value]) => ({ model, value: Number(value.toFixed(6)) }));
+  await expect.poll(() => page.locator(".rank-row").evaluateAll((elements) => elements.map((element) => ({
+    model: element.dataset.model,
+    value: Number(Number(element.querySelector(".rank-value").dataset.numericValue).toFixed(6)),
+  })))).toEqual(expected);
+  const total = rows.reduce((sum, row) => sum + Number(row[metric] || 0), 0);
+  await expect.poll(async () => Math.abs(Number(await page.locator("#bucket-total").getAttribute("data-numeric-value")) - total)).toBeLessThan(0.000001);
+}
+
+function bucketRows(series, index) {
+  const { from, offset, bucket } = series.range;
+  const origin = bucket === 604800 ? 345600 : 0;
+  const first = Math.floor((from + offset - origin) / bucket) * bucket + origin - offset;
+  return series.rows.filter((row) => row.bucket === first + index * bucket);
+}
+
+test("selected range ranking totals change with all time and every metric, independently of chart visibility", async ({ page }) => {
+  const initial = await seriesAfter(page, () => waitForDashboard(page));
+  await expect(page.locator('[data-ranking-scope="range"]')).toHaveAttribute("aria-pressed", "true");
+  await expectRanking(page, initial.rows);
+  const all = await seriesAfter(page, () => page.locator('[data-range="all"]').click());
+  expect(all.totals.calls).toBeGreaterThan(initial.totals.calls);
+  await expectRanking(page, all.rows);
+  await expect(page.locator("#ranking-time")).toHaveText(await page.locator("#range-summary").textContent());
+  for (const metric of ["tokens", "cost", "calls"]) {
+    await page.locator(`[data-metric="${metric}"]`).click();
+    await expectRanking(page, all.rows, metric);
+    await expect(page.locator("#ranking-total-label")).toContainText(metric === "tokens" ? /Tokens/ : metric === "cost" ? /费用|cost/ : /调用|Calls/);
+  }
+  await page.locator('.legend-chip[aria-pressed="true"]').first().click();
+  await expectRanking(page, all.rows);
+  const outsideTopFive = await page.locator(".rank-row").nth(5).getAttribute("data-model");
+  await page.locator(".rank-row").nth(5).press("Enter");
+  await expect(page.locator("#model-view-select")).toHaveValue("all");
+  await expect(page.locator(".legend-chip").filter({ hasText: outsideTopFive })).toHaveAttribute("aria-pressed", "true");
+  await expectRanking(page, all.rows);
+  await page.locator("#model-view-select").selectOption("all");
+  await expect(page.locator(".rank-row.inactive")).toHaveCount(0);
+});
+
+test("replay ranking follows bucket navigation and explicit range totals remain available during replay", async ({ page }) => {
+  await waitForDashboard(page);
+  const all = await seriesAfter(page, () => page.locator('[data-range="all"]').click());
+  await page.locator('[data-ranking-scope="bucket"]').click();
+  const last = Number(await page.locator("#scrubber").getAttribute("max"));
+  await expectRanking(page, bucketRows(all, last));
+  await page.locator("#scrubber").focus();
+  await page.locator("#scrubber").press("Home");
+  await expectRanking(page, bucketRows(all, 0));
+  await expect(page.locator("#play-progress")).toHaveText("0%");
+  await page.locator("#step-forward").click();
+  await expectRanking(page, bucketRows(all, 1));
+  await page.locator(".ranking-pulse-bar").first().click();
+  await expectRanking(page, bucketRows(all, 0));
+  await page.locator("#play-button").click();
+  await expect.poll(() => page.locator("#scrubber").inputValue()).not.toBe("0");
+  await expect(page.locator('[data-ranking-scope="bucket"]')).toHaveAttribute("aria-pressed", "true");
+  await page.locator('[data-ranking-scope="range"]').click();
+  await expectRanking(page, all.rows);
+  await page.locator("#play-button").click();
+  await expect(page.locator('[data-ranking-scope="range"]')).toHaveAttribute("aria-pressed", "true");
+  await expectRanking(page, all.rows);
+});
+
+test("ranking resets to range totals on filters and preserves its scope across language and theme changes", async ({ page }) => {
+  await waitForDashboard(page);
+  for (const range of ["year", "all"]) {
+    await page.locator('[data-ranking-scope="bucket"]').click();
+    const series = await seriesAfter(page, () => page.locator(`[data-range="${range}"]`).click());
+    await expect(page.locator('[data-ranking-scope="range"]')).toHaveAttribute("aria-pressed", "true");
+    await expectRanking(page, series.rows);
+  }
+  for (const [selector, value] of [["#source-select", "proxy"], ["#model-mode", "requested"], ["#bucket-select", "1w"]]) {
+    await page.locator('[data-ranking-scope="bucket"]').click();
+    const series = await seriesAfter(page, () => page.locator(selector).selectOption(value));
+    await expect(page.locator('[data-ranking-scope="range"]')).toHaveAttribute("aria-pressed", "true");
+    await expectRanking(page, series.rows);
+    await page.locator('[data-ranking-scope="bucket"]').click();
+    await page.locator("#scrubber").focus();
+    await page.locator("#scrubber").press("Home");
+    await expectRanking(page, bucketRows(series, 0));
+    await page.locator("#lang-toggle").click();
+    await page.locator("#theme-toggle").click();
+    await expect(page.locator('[data-ranking-scope="bucket"]')).toHaveAttribute("aria-pressed", "true");
+    await expectRanking(page, bucketRows(series, 0));
+  }
+});
+
+test("empty replay buckets do not retain the previous range ranking or total", async ({ page }) => {
+  await waitForDashboard(page);
+  await seriesAfter(page, () => page.locator('[data-range="1"]').click());
+  const series = await seriesAfter(page, () => page.locator("#bucket-select").selectOption("5m"));
+  await expectRanking(page, series.rows);
+  await page.locator("#scrubber").focus();
+  await page.locator("#scrubber").press("Home");
+  await page.locator("#step-forward").click();
+  expect(bucketRows(series, 1)).toEqual([]);
+  await expectRanking(page, []);
+  await expect(page.locator("#ranking-list")).toContainText(/没有调用记录|No calls/);
+  await expect(page.locator("#bucket-total")).toHaveText("0");
+  await page.locator('[data-ranking-scope="range"]').click();
+  await expectRanking(page, series.rows);
+});
+
+test("rapid scope and metric switches cannot restore a stale animated total", async ({ page }) => {
+  const series = await seriesAfter(page, () => waitForDashboard(page));
+  await expectRanking(page, series.rows);
+  const rangeText = await page.locator("#bucket-total").innerText();
+  await page.evaluate(() => {
+    for (let i = 0; i < 6; i++) {
+      document.querySelector('[data-ranking-scope="bucket"]').click();
+      document.querySelector('[data-metric="cost"]').click();
+      document.querySelector('[data-ranking-scope="range"]').click();
+      document.querySelector('[data-metric="calls"]').click();
+    }
+  });
+  await expectRanking(page, series.rows);
+  // Observe the final rendered text after the 240ms number animation, not only
+  // its target dataset; an older callback must not overwrite it later.
+  await page.waitForTimeout(300);
+  await expect(page.locator("#bucket-total")).toHaveText(rangeText);
+});
+
+test("a late failure from an obsolete range cannot replace the current ranking", async ({ page }) => {
+  await waitForDashboard(page);
+  let releaseFailure;
+  const failureReleased = new Promise((resolve) => { releaseFailure = resolve; });
+  await page.route("**/api/series?**", async (route) => {
+    const url = new URL(route.request().url());
+    if (Number(url.searchParams.get("to")) - Number(url.searchParams.get("from")) === 30 * 86400) {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "Obsolete test request" }) });
+      releaseFailure();
+    } else await route.continue();
+  });
+  await page.locator('[data-range="30"]').click();
+  const all = await seriesAfter(page, () => page.locator('[data-range="all"]').click());
+  await expectRanking(page, all.rows);
+  await failureReleased;
+  await expect(page.locator("#range-summary")).not.toContainText(/查询失败|Query failed/);
+  await expect(page.locator("#ranking-note")).not.toContainText(/查询失败|Query failed/);
+  await expect(page.locator(".ranking-panel")).toHaveAttribute("aria-busy", "false");
+  await expectRanking(page, all.rows);
+});
+
 test("source filters can return to all time without an invalid range", async ({ page }) => {
   const badResponses = [];
   page.on("response", (response) => {
@@ -69,7 +226,8 @@ test("custom date controls are editable and apply a local range", async ({ page 
   await page.locator("#date-to-trigger").click();
   await page.locator(".date-picker-day:not(.outside)").filter({ hasText: /^3$/ }).click();
   await page.locator("#date-to-time").fill("19:45");
-  await page.locator("#apply-button").click();
+  const series = await seriesAfter(page, () => page.locator("#apply-button").click());
+  await expectRanking(page, series.rows);
   await expect(page.locator("#date-from")).toHaveValue(`${fromMonth}-01T08:15`);
   await expect(page.locator("#date-to")).toHaveValue(`${toMonth}-03T19:45`);
   await expect(page.locator("#range-summary")).toContainText(`${fromMonth.slice(5)}/01`);
@@ -88,6 +246,13 @@ for (const width of [1920, 1600, 1440, 1320, 1280, 1240, 1180, 1094, 1024, 900])
           overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
           controlsRight: document.querySelector(".chart-controls").getBoundingClientRect().right,
           chartRight: document.querySelector(".chart-panel").getBoundingClientRect().right,
+          ranking: document.querySelector(".ranking-panel").getBoundingClientRect().toJSON(),
+          rankingScope: document.querySelector(".ranking-scope").getBoundingClientRect().toJSON(),
+          rankingButtons: [...document.querySelectorAll("[data-ranking-scope]")].map((button) => ({
+            width: button.getBoundingClientRect().width,
+            scrollWidth: button.scrollWidth,
+            clientWidth: button.clientWidth,
+          })),
           titleWidth: document.querySelector(".chart-header > div:first-child").getBoundingClientRect().width,
           fields: [...document.querySelectorAll(".date-input-group")].map((el) => {
             const trigger = el.querySelector(".date-trigger");
@@ -105,6 +270,12 @@ for (const width of [1920, 1600, 1440, 1320, 1280, 1240, 1180, 1094, 1024, 900])
         }));
         expect(layout.overflow).toBe(false);
         expect(layout.controlsRight).toBeLessThanOrEqual(layout.chartRight + 1);
+        expect(layout.rankingScope.left).toBeGreaterThanOrEqual(layout.ranking.left + 20);
+        expect(layout.rankingScope.right).toBeLessThanOrEqual(layout.ranking.right - 20);
+        for (const button of layout.rankingButtons) {
+          expect(button.width).toBeGreaterThanOrEqual(90);
+          expect(button.scrollWidth).toBeLessThanOrEqual(button.clientWidth);
+        }
         expect(layout.titleWidth).toBeGreaterThanOrEqual(180);
         for (const field of layout.fields) {
           expect(field.width).toBeLessThanOrEqual(160);

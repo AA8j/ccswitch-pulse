@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.7 — 2026-10-12
+
+- Made selected-range totals the default ranking, including all historical data for All time.
+- Added explicit selected-range and replay-bucket scopes, with matching time bounds, metrics and summary labels.
+- Kept replay navigation linked to the current bucket while allowing range totals to remain available during playback.
+- Fixed hidden models outside Top 5 not appearing when enabled from the ranking, overlapping number animations and obsolete request errors.
+- Added API-reconciled ranking, filter, replay, empty-bucket and rapid-switch regressions; refreshed bilingual README images.
+
 ## v0.1.6 — 2026-10-12
 
 - Fixed the 1280px cross-platform date-range overflow by wrapping the entire range according to actual content width, not an assumed font-dependent breakpoint.

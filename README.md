@@ -13,7 +13,7 @@
   <a href="#数据与隐私">数据与隐私</a>
 </p>
 
-![CCSwitch Pulse 深色主题](docs/images/dashboard-dark-zh-e1489b415cd7.png)
+![CCSwitch Pulse 深色主题](docs/images/dashboard-dark-zh-0fb5ad19da57.png)
 
 > 截图使用固定锚点的合成数据，不包含个人调用记录；模型名称和分布形状参考本地聚合数据的结构，不复制真实记录。CCSwitch Pulse 面向桌面浏览器，支持中英文、浅色和深色主题。
 
@@ -64,7 +64,7 @@ npm start -- --db /path/to/cc-switch.db
 
 ## 更新
 
-当前版本：`v0.1.6`。更新前先在旧程序终端按 `Ctrl+C` 停止；仅刷新网页不会替换正在运行的程序。项目不会自动更新本地程序，避免在没有确认的情况下改变数据读取逻辑；更新由你显式选择版本。
+当前版本：`v0.1.7`。更新前先在旧程序终端按 `Ctrl+C` 停止；仅刷新网页不会替换正在运行的程序。项目不会自动更新本地程序，避免在没有确认的情况下改变数据读取逻辑；更新由你显式选择版本。
 
 ### 使用最新主线
 
@@ -77,7 +77,7 @@ npx --yes --prefer-online "github:aa8j/ccswitch-pulse"
 固定到本次发布的版本：
 
 ```bash
-npx --yes "github:aa8j/ccswitch-pulse#v0.1.6"
+npx --yes "github:aa8j/ccswitch-pulse#v0.1.7"
 ```
 
 ### 更新本地源码
@@ -96,12 +96,16 @@ npm start
 | 你想了解什么 | CCSwitch Pulse 提供什么 |
 | --- | --- |
 | 哪些模型使用最多？ | 按时间范围和粒度查看模型趋势，支持折线图、分组柱状图、堆叠柱状图和 Top 5 / 全部模型。 |
-| 使用高峰发生在哪里？ | 回放时间线，查看当前时段排行、峰值和星期 × 小时热力图。短范围会区分“未观测”与“无调用”。 |
+| 使用高峰发生在哪里？ | 所选范围的累计排行与回放时段排行可切换，搭配时间线、峰值和星期 × 小时热力图。短范围会区分“未观测”与“无调用”。 |
 | 请求模型和实际模型有什么差异？ | 在实际模型和请求模型之间切换，空的请求模型自动回退到实际模型。 |
 | 历史数据是否可信？ | 近期请求明细与历史日汇总分层统计；归档数据不会被伪装成小时或分钟级记录。 |
 | 哪些记录属于同一会话？ | 只对带稳定 `session_id` 的导入明细聚合会话，不把代理请求猜成对话。 |
 | 怎样带走结果？ | 导出聚合 CSV，下载 Markdown 周期报告，或在浏览器本地生成 PNG 分享卡。 |
 | 怎样保护隐私？ | API 不返回提示词、回复、会话 ID 或 provider 配置；分享卡默认隐藏估算费用，并提供 Token / 最晚活跃开关。 |
+
+### 排行统计口径
+
+排行默认汇总**所选时间范围内的全部模型**，选择“全部”即统计所有可用历史。拖动时间轴、逐格跳转或开始播放时，自动切换到**回放时段**，仅统计游标所在的时间桶；也可用排行上方的按钮切回范围累计。调用、Token 和费用分别排序，主图的 Top 5 / 模型显隐不会缩小排行统计范围。
 
 ## 报告与分享卡
 
@@ -110,9 +114,9 @@ npm start
 <details>
 <summary><strong>浅色主题与周期报告</strong></summary>
 
-![CCSwitch Pulse 浅色主题](docs/images/dashboard-light-zh-91a3f8eeda71.png)
+![CCSwitch Pulse 浅色主题](docs/images/dashboard-light-zh-196fd08f6f29.png)
 
-![CCSwitch Pulse 周期报告](docs/images/report-light-zh-34e105b70e3c.png)
+![CCSwitch Pulse 周期报告](docs/images/report-light-zh-fa2d53bc3073.png)
 
 </details>
 
@@ -126,7 +130,7 @@ npm start
 <details>
 <summary><strong>紧凑日期筛选与日历</strong></summary>
 
-![CCSwitch Pulse 日期筛选](docs/images/date-range-dark-zh-a4a2a9c2fd78.png)
+![CCSwitch Pulse 日期筛选](docs/images/date-range-dark-zh-c232a7a4077c.png)
 
 </details>
 

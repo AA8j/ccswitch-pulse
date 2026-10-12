@@ -1005,11 +1005,31 @@ section[id] { scroll-margin-top: 18px; }
   font-size: 22px;
   color: #a0c5ca;
 }
+.ranking-scope {
+  margin: 16px 22px 0;
+}
+.ranking-scope button {
+  flex: 1;
+  min-width: 0;
+}
+.ranking-note {
+  margin: 9px 22px 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.65;
+}
+.ranking-panel .panel-header > div {
+  min-width: 0;
+}
+.ranking-panel #ranking-time {
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
 .rank-summary {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  margin: 22px 22px 16px;
+  margin: 14px 22px 16px;
 }
 .rank-summary > div {
   padding: 13px 14px;

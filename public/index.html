@@ -52,7 +52,7 @@
             </div>
             <p>你的用量数据留在本机。<br />看板只读取 CC Switch 数据库。</p>
           </div>
-          <div class="side-version"><span>CCSwitch Pulse</span><span>v0.1.6</span></div>
+          <div class="side-version"><span>CCSwitch Pulse</span><span>v0.1.7</span></div>
         </div>
       </aside>
 
@@ -330,18 +330,23 @@
           <article class="panel ranking-panel">
             <div class="panel-header">
               <div>
-                <div class="section-kicker">此刻</div>
-                <h2>当前时段排行</h2>
-                <p id="ranking-time">跟随回放实时更新</p>
+                <div id="ranking-kicker" class="section-kicker">范围汇总</div>
+                <h2 id="ranking-title">所选范围排行</h2>
+                <p id="ranking-time">—</p>
               </div>
               <span class="ranking-symbol">↗</span>
             </div>
+            <div class="ranking-scope segmented" role="group" aria-label="排行统计范围">
+              <button type="button" data-ranking-scope="range" class="active" aria-pressed="true">所选范围</button>
+              <button type="button" data-ranking-scope="bucket" aria-pressed="false">回放时段</button>
+            </div>
+            <p id="ranking-note" class="ranking-note">汇总范围内全部模型；主图显隐不改变统计。</p>
             <div class="rank-summary">
               <div>
-                <span>时段调用量</span><strong id="bucket-total">—</strong>
+                <span id="ranking-total-label">范围调用量</span><strong id="bucket-total">—</strong>
               </div>
               <div>
-                <span>区间进度</span><strong id="play-progress">—</strong>
+                <span id="ranking-secondary-label">活跃模型</span><strong id="play-progress">—</strong>
               </div>
             </div>
             <div id="ranking-list" class="ranking-list"></div>

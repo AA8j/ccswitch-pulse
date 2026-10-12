@@ -13,7 +13,7 @@
   <a href="#data-and-privacy">Data and privacy</a>
 </p>
 
-![CCSwitch Pulse dark theme](docs/images/dashboard-dark-en-eeef116b9d75.png)
+![CCSwitch Pulse dark theme](docs/images/dashboard-dark-en-69da61231d4a.png)
 
 > Screenshots use fixed-anchor synthetic data and contain no personal usage records. Model names and distribution shapes follow the structure of aggregated local usage, not copied records. CCSwitch Pulse targets desktop browsers and supports Chinese, English, light, and dark themes.
 
@@ -64,7 +64,7 @@ npm start -- --db /path/to/cc-switch.db
 
 ## Updating
 
-Current version: `v0.1.6`. Stop the previous process with `Ctrl+C` before updating; refreshing the browser does not replace the running app. The project does not auto-update local installations; updates are explicit so a data-reading change never happens unexpectedly.
+Current version: `v0.1.7`. Stop the previous process with `Ctrl+C` before updating; refreshing the browser does not replace the running app. The project does not auto-update local installations; updates are explicit so a data-reading change never happens unexpectedly.
 
 ### Track the latest main branch
 
@@ -77,7 +77,7 @@ npx --yes --prefer-online "github:aa8j/ccswitch-pulse"
 Pin this release to avoid unexpected changes:
 
 ```bash
-npx --yes "github:aa8j/ccswitch-pulse#v0.1.6"
+npx --yes "github:aa8j/ccswitch-pulse#v0.1.7"
 ```
 
 ### Update a local checkout
@@ -96,12 +96,16 @@ Updating replaces the program and dependencies; it never writes to the CC Switch
 | What you want to know | What CCSwitch Pulse provides |
 | --- | --- |
 | Which models do I use most? | Model trends by range and bucket, with line, grouped-bar, stacked-bar, Top 5, and all-model views. |
-| Where do usage peaks happen? | Timeline replay, current-bucket ranking, peak highlights, and a weekday × hour heatmap. Short ranges distinguish unobserved cells from observed zero activity. |
+| Where do usage peaks happen? | Switch between selected-range totals and replay-bucket ranking, with timeline replay, peak highlights, and a weekday × hour heatmap. Short ranges distinguish unobserved cells from observed zero activity. |
 | What is the difference between requested and actual models? | Switch between the actual model and requested model; empty requested values fall back to the actual model. |
 | Can I trust long-range history? | Retained request details and daily archives are kept separate; archival data is never presented as hourly or minute-level history. |
 | Which records belong to one session? | Only imported details with stable `session_id` values are grouped; proxy requests are never guessed into conversations. |
 | How do I take the results with me? | Export aggregated CSV, download a Markdown period report, or create a PNG share card locally in the browser. |
 | What stays private? | APIs do not return prompts, responses, session IDs, or provider settings. Estimated cost is hidden by default, with Token and last-active privacy switches. |
+
+### Ranking scope
+
+Rankings default to **all models in the selected date range**; All time includes all available history. Scrubbing, stepping or starting playback switches to the **replay bucket** at the cursor, not a cumulative total. Use the buttons above the ranking to return to range totals. Calls, tokens and estimated cost each have their own order. Top 5 and chart visibility never narrow the ranking totals.
 
 ## Reports and share cards
 
@@ -110,9 +114,9 @@ The period report includes the leading model, active days, peak usage, daily ave
 <details>
 <summary><strong>Light theme and period report</strong></summary>
 
-![CCSwitch Pulse light theme](docs/images/dashboard-light-en-ffddb292cefd.png)
+![CCSwitch Pulse light theme](docs/images/dashboard-light-en-b0007f7be627.png)
 
-![CCSwitch Pulse period report](docs/images/report-light-en-80239863d4e9.png)
+![CCSwitch Pulse period report](docs/images/report-light-en-76e95a7e73f0.png)
 
 </details>
 
@@ -126,7 +130,7 @@ The period report includes the leading model, active days, peak usage, daily ave
 <details>
 <summary><strong>Compact date range and calendar</strong></summary>
 
-![CCSwitch Pulse date range](docs/images/date-range-dark-en-bc36d4dc1b2d.png)
+![CCSwitch Pulse date range](docs/images/date-range-dark-en-b9329eed9b74.png)
 
 </details>
 
