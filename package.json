@@ -1,6 +1,6 @@
 {
   "name": "ccswitch-pulse",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "A local, read-only model usage dashboard for CC Switch",
   "type": "module",
   "bin": {

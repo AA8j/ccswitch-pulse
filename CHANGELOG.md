@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.4 — 2026-10-12
+
+- Replaced the native browser date popup with a themed calendar picker and compact time inputs.
+- Added custom-range and narrow-desktop UI regression tests.
+
+
 ## v0.1.3 — 2026-10-11
 
 - Replaced native datetime-local controls with a themed calendar and time picker.
